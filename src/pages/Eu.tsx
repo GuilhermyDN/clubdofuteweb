@@ -27,7 +27,7 @@ function explainAxiosError(e: any) {
     const status = e?.response?.status;
     const data = e?.response?.data;
     if (status) return `Erro (HTTP ${status}): ${JSON.stringify(data)}`;
-    return "Falha de rede / CORS / backend fora.";
+    return "Falha de rede / backend offline.";
 }
 
 function toNumOrNull(v: string) {
@@ -65,11 +65,9 @@ export default function EuPage() {
 
     const [data, setData] = useState<EuResponse | null>(null);
 
-    // listas
     const [equipesMembro, setEquipesMembro] = useState<MinhaEquipeResumo[]>([]);
     const [equipesAdmin, setEquipesAdmin] = useState<MinhaEquipeResumo[]>([]);
 
-    // form
     const [telefone, setTelefone] = useState("");
     const [cep, setCep] = useState("");
     const [peso, setPeso] = useState("");
@@ -77,7 +75,6 @@ export default function EuPage() {
     const [notaVolei, setNotaVolei] = useState("");
     const [notaFutevolei, setNotaFutevolei] = useState("");
 
-    // snapshot backend p/ diff
     const originalRef = useRef<{
         telefone: string;
         cep: string;
@@ -113,6 +110,7 @@ export default function EuPage() {
                 notaVolei: normNumOrNull(d.notaVolei),
                 notaFutevolei: normNumOrNull(d.notaFutevolei),
             };
+
             originalRef.current = o;
 
             setTelefone(o.telefone);
@@ -123,10 +121,12 @@ export default function EuPage() {
             setNotaFutevolei(o.notaFutevolei === null ? "" : String(o.notaFutevolei));
         } catch (e: any) {
             const status = e?.response?.status;
+
             if (status === 401 || status === 403) {
                 nav("/login");
                 return;
             }
+
             setErr(explainAxiosError(e));
         } finally {
             setLoading(false);
@@ -135,15 +135,16 @@ export default function EuPage() {
 
     useEffect(() => {
         load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const initials = useMemo(() => {
         const n = (data?.nome ?? "").trim();
         if (!n) return "EU";
+
         const parts = n.split(/\s+/).filter(Boolean);
         const a = parts[0]?.[0] ?? "E";
-        const b = parts.length > 1 ? parts[parts.length - 1][0] : (parts[0]?.[1] ?? "U");
+        const b = parts.length > 1 ? parts[parts.length - 1][0] : parts[0]?.[1] ?? "U";
+
         return (a + b).toUpperCase();
     }, [data?.nome]);
 
@@ -158,22 +159,9 @@ export default function EuPage() {
         };
     }, [telefone, cep, peso, altura, notaVolei, notaFutevolei]);
 
-    const invalidPeso = useMemo(() => !!peso.trim() && normalized.peso === null, [peso, normalized.peso]);
-    const invalidAltura = useMemo(() => !!altura.trim() && normalized.altura === null, [altura, normalized.altura]);
-    const invalidNotaVolei = useMemo(
-        () => !!notaVolei.trim() && normalized.notaVolei === null,
-        [notaVolei, normalized.notaVolei]
-    );
-    const invalidNotaFutevolei = useMemo(
-        () => !!notaFutevolei.trim() && normalized.notaFutevolei === null,
-        [notaFutevolei, normalized.notaFutevolei]
-    );
-
     const hasChanges = useMemo(() => {
         const o = originalRef.current;
         if (!o) return false;
-
-        if (invalidPeso || invalidAltura || invalidNotaVolei || invalidNotaFutevolei) return false;
 
         return (
             o.telefone !== normalized.telefone ||
@@ -183,7 +171,7 @@ export default function EuPage() {
             o.notaVolei !== normalized.notaVolei ||
             o.notaFutevolei !== normalized.notaFutevolei
         );
-    }, [normalized, invalidPeso, invalidAltura, invalidNotaVolei, invalidNotaFutevolei]);
+    }, [normalized]);
 
     async function onSalvar() {
         setErr(null);
@@ -191,11 +179,6 @@ export default function EuPage() {
 
         const o = originalRef.current;
         if (!o) return;
-
-        if (invalidPeso) return setErr("Peso inválido. Use número (ex.: 72.5).");
-        if (invalidAltura) return setErr("Altura inválida. Use número (ex.: 175).");
-        if (invalidNotaVolei) return setErr("notaVolei inválida. Use número (0-10).");
-        if (invalidNotaFutevolei) return setErr("notaFutevolei inválida. Use número (0-10).");
 
         if (!hasChanges) {
             setOk("Nada para salvar.");
@@ -206,10 +189,8 @@ export default function EuPage() {
 
         if (o.telefone !== normalized.telefone) patch.telefone = normalized.telefone;
         if (o.cep !== normalized.cep) patch.cep = normalized.cep;
-
         if (o.peso !== normalized.peso) patch.peso = normalized.peso ?? 0;
         if (o.altura !== normalized.altura) patch.altura = normalized.altura ?? 0;
-
         if (o.notaVolei !== normalized.notaVolei) patch.notaVolei = normalized.notaVolei ?? 0;
         if (o.notaFutevolei !== normalized.notaFutevolei) patch.notaFutevolei = normalized.notaFutevolei ?? 0;
 
@@ -232,29 +213,61 @@ export default function EuPage() {
     return (
         <div className="euShell">
             <div className="euPanel">
+
+                {/* NAVBAR SUPERIOR */}
+
                 <div className="euTopBar">
-                    <button className="euIconBtn" type="button" onClick={() => nav(-1)}>
-                        ←
-                    </button>
                     <div className="euTopTitle">Meu perfil</div>
-                    <button className="euGhostBtn" type="button" onClick={() => nav("/equipes")}>
-                        Equipes
-                    </button>
+
+                    <div className="euNavGroup">
+                        <button
+                            className="euNavLink"
+                            onClick={() => nav("/equipes")}
+                        >
+                            Equipes
+                        </button>
+
+                        <button
+                            className="euNavLink active"
+                        >
+                            Perfil
+                        </button>
+                    </div>
                 </div>
+
+                {/* HEADER PERFIL */}
 
                 <div className="euHeader">
                     <div className="euAvatarWrap">
-                        <div className="euAvatarFallback">{initials}</div>
+                        <div className="euAvatarFallback">
+                            {initials}
+                        </div>
                     </div>
-                    <div className="euName">{data.nome}</div>
-                    <div className="euSub">Telefone: {data.telefone}</div>
+
+                    <div className="euName">
+                        {data.nome}
+                    </div>
+
+                    <div className="euSub">
+                        {data.telefone}
+                    </div>
                 </div>
 
-                {(ok || err) && <div className={`euMsg ${ok ? "ok" : "err"}`}>{ok ?? err}</div>}
+                {(ok || err) && (
+                    <div className={`euMsg ${ok ? "ok" : "err"}`}>
+                        {ok ?? err}
+                    </div>
+                )}
 
                 <div className="euBody">
+
+                    {/* CONTA */}
+
                     <section className="euCard">
-                        <div className="euCardTitle">Conta</div>
+
+                        <div className="euCardTitle">
+                            Conta
+                        </div>
 
                         <div className="euRow">
                             <span>ID</span>
@@ -263,21 +276,27 @@ export default function EuPage() {
 
                         <div className="euRow">
                             <span>Criado em</span>
-                            <strong className="euEllipsis">{fmtISO(data.criadoEm)}</strong>
+                            <strong>{fmtISO(data.criadoEm)}</strong>
                         </div>
+
                     </section>
 
+                    {/* PERFIL */}
+
                     <section className="euCard">
-                        <div className="euCardTitle">Dados do perfil</div>
+
+                        <div className="euCardTitle">
+                            Dados do perfil
+                        </div>
 
                         <div className="euFormGrid">
+
                             <label className="euLabel">
                                 Telefone
                                 <input
                                     className="euInput"
                                     value={telefone}
                                     onChange={(e) => setTelefone(e.target.value)}
-                                    placeholder="Ex.: +5511999999999"
                                 />
                             </label>
 
@@ -287,136 +306,155 @@ export default function EuPage() {
                                     className="euInput"
                                     value={cep}
                                     onChange={(e) => setCep(e.target.value)}
-                                    placeholder="Ex.: 05382-010"
                                 />
                             </label>
 
                             <label className="euLabel">
                                 Peso
                                 <input
-                                    className={`euInput ${invalidPeso ? "isInvalid" : ""}`}
+                                    className="euInput"
                                     value={peso}
                                     onChange={(e) => setPeso(e.target.value)}
-                                    placeholder="Ex.: 72.5"
                                 />
                             </label>
 
                             <label className="euLabel">
                                 Altura
                                 <input
-                                    className={`euInput ${invalidAltura ? "isInvalid" : ""}`}
+                                    className="euInput"
                                     value={altura}
                                     onChange={(e) => setAltura(e.target.value)}
-                                    placeholder="Ex.: 175"
                                 />
                             </label>
 
                             <label className="euLabel">
                                 Nota Vôlei
                                 <input
-                                    className={`euInput ${invalidNotaVolei ? "isInvalid" : ""}`}
+                                    className="euInput"
                                     value={notaVolei}
                                     onChange={(e) => setNotaVolei(e.target.value)}
-                                    placeholder="0-10"
                                 />
                             </label>
 
                             <label className="euLabel">
                                 Nota Futevôlei
                                 <input
-                                    className={`euInput ${invalidNotaFutevolei ? "isInvalid" : ""}`}
+                                    className="euInput"
                                     value={notaFutevolei}
                                     onChange={(e) => setNotaFutevolei(e.target.value)}
-                                    placeholder="0-10"
                                 />
                             </label>
+
                         </div>
 
                         <button
                             className="euBtn primary"
-                            type="button"
                             onClick={onSalvar}
-                            disabled={
-                                saving ||
-                                !hasChanges ||
-                                invalidPeso ||
-                                invalidAltura ||
-                                invalidNotaVolei ||
-                                invalidNotaFutevolei
-                            }
+                            disabled={!hasChanges || saving}
                         >
                             {saving ? "Salvando..." : "Salvar alterações"}
                         </button>
 
-                        {!hasChanges && <div className="euHint">Nenhuma alteração pendente.</div>}
                     </section>
 
+                    {/* ADMIN */}
+
                     <section className="euCard">
-                        <div className="euCardTitle">Sou administrador</div>
+
+                        <div className="euCardTitle">
+                            Sou administrador
+                        </div>
 
                         {equipesAdmin.length === 0 ? (
-                            <div className="euEmpty">Você não é administrador de nenhuma equipe.</div>
+                            <div className="euEmpty">
+                                Você não administra equipes.
+                            </div>
                         ) : (
                             <div className="euTeamList">
+
                                 {equipesAdmin.map((t) => (
+
                                     <button
                                         key={t.id}
                                         className="euTeamItem"
-                                        type="button"
                                         onClick={() => nav(`/equipes/${t.id}`)}
                                     >
+
                                         <div className="euTeamLeft">
-                                            <div className="euTeamName">{t.nome}</div>
+
+                                            <div className="euTeamName">
+                                                {t.nome}
+                                            </div>
+
                                             <div className="euTeamMeta">
                                                 {t.esporte} • {t.statusEquipe} • {t.totalMembros} membros
                                             </div>
+
                                         </div>
-                                        <div className="euTeamBadge admin">ADMIN</div>
+
+                                        <div className="euTeamBadge admin">
+                                            ADMIN
+                                        </div>
+
                                     </button>
+
                                 ))}
+
                             </div>
                         )}
+
                     </section>
+
+                    {/* MEMBRO */}
 
                     <section className="euCard">
-                        <div className="euCardTitle">Minhas equipes</div>
+
+                        <div className="euCardTitle">
+                            Minhas equipes
+                        </div>
 
                         {equipesMembro.length === 0 ? (
-                            <div className="euEmpty">Você ainda não entrou em nenhuma equipe.</div>
+                            <div className="euEmpty">
+                                Você não participa de equipes.
+                            </div>
                         ) : (
                             <div className="euTeamList">
+
                                 {equipesMembro.map((t) => (
+
                                     <button
                                         key={t.id}
                                         className="euTeamItem"
-                                        type="button"
                                         onClick={() => nav(`/equipes/${t.id}`)}
                                     >
+
                                         <div className="euTeamLeft">
-                                            <div className="euTeamName">{t.nome}</div>
+
+                                            <div className="euTeamName">
+                                                {t.nome}
+                                            </div>
+
                                             <div className="euTeamMeta">
                                                 {t.esporte} • {t.statusEquipe} • {t.totalMembros} membros
                                             </div>
+
                                         </div>
-                                        <div className="euTeamBadge">VER</div>
+
+                                        <div className="euTeamBadge">
+                                            VER
+                                        </div>
+
                                     </button>
+
                                 ))}
+
                             </div>
                         )}
+
                     </section>
+
                 </div>
 
-                <div className="euBottomNav">
-                    <button className="euNavBtn" type="button" onClick={() => nav("/home-logado")}>
-                        Home
-                    </button>
-                    <button className="euNavBtn" type="button" onClick={() => nav("/equipes")}>
-                        Equipes
-                    </button>
-                    <button className="euNavBtn active" type="button" onClick={() => nav("/eu")}>
-                        Perfil
-                    </button>
-                </div>
             </div>
         </div>
     );
