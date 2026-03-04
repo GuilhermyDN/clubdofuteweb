@@ -1,0 +1,301 @@
+/* HOME-LOGADO (mesma estrutura, vibe do index.css) */
+/* Depende do seu index.css ter:
+   :root { --text; --muted; --input; --input-border; --input-focus; --btn; --btn-hover; }
+   e o body com gradiente + ::before/::after
+*/
+
+.hlPage {
+  min-height: 100vh;
+  color: var(--text);
+}
+
+/* Top sticky com blur, seguindo o mesmo glass do app */
+.hlAppTop {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+
+  backdrop-filter: blur(12px);
+  background: rgba(10, 10, 12, 0.62);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+  padding: 14px 14px 10px;
+}
+
+.hlTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hlBrand {
+  font-weight: 950;
+  letter-spacing: -0.3px;
+}
+
+/* Botão estilo app */
+.hlProfileBtn {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(244, 244, 245, 0.90);
+
+  padding: 10px 12px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.hlProfileBtn:hover {
+  filter: brightness(1.02);
+}
+
+/* Search: input no padrão do index.css */
+.hlSearch {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.hlSearchInput {
+  flex: 1;
+
+  border-radius: 12px;
+  padding: 12px 12px;
+
+  background: var(--input);
+  border: 1px solid var(--input-border);
+  color: var(--text);
+
+  outline: none;
+  font-weight: 900;
+}
+
+.hlSearchInput:focus {
+  box-shadow: 0 0 0 3px var(--input-focus);
+  border-color: rgba(120, 200, 255, 0.2);
+}
+
+.hlSearchBtn {
+  border-radius: 12px;
+  padding: 12px 14px;
+
+  background: var(--btn);
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  color: rgba(255, 255, 255, 0.92);
+
+  font-weight: 950;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hlSearchBtn:hover {
+  background: var(--btn-hover);
+}
+
+.hlSearchBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Chips igual, mas com glass + paleta */
+.hlChips {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.hlChip {
+  white-space: nowrap;
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(244, 244, 245, 0.86);
+
+  padding: 10px 12px;
+  border-radius: 999px;
+
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.hlChip.active {
+  background: rgba(254, 240, 138, 0.16);
+  border-color: rgba(254, 240, 138, 0.22);
+  color: #fef08a;
+}
+
+/* Conteúdo central igual, só cor e respiro */
+.hlContent {
+  padding: 12px 14px 90px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.hlSectionTitle {
+  margin: 10px 0 10px;
+  font-weight: 950;
+  font-size: 13px;
+  letter-spacing: -0.15px;
+  color: rgba(244, 244, 245, 0.78);
+}
+
+/* Cards: mais “auth-card/euCard vibe” */
+.hlCards {
+  display: grid;
+  gap: 12px;
+}
+
+.hlCardGame {
+  border-radius: 18px;
+  overflow: hidden;
+
+  background: rgba(31, 31, 31, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.hlCardImg {
+  height: 130px;
+  background: rgba(255, 255, 255, 0.06);
+  position: relative;
+}
+
+/* overlay suave igual seus covers */
+.hlCardImg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(10, 10, 12, 0.80),
+    rgba(10, 10, 12, 0.10)
+  );
+  pointer-events: none;
+}
+
+.hlCardImg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hlCardBody {
+  padding: 12px 12px 14px;
+}
+
+.hlCardTitle {
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  margin-bottom: 4px;
+}
+
+.hlCardSub {
+  color: rgba(244, 244, 245, 0.72);
+  font-weight: 850;
+  font-size: 12px;
+  line-height: 1.35;
+  margin-bottom: 12px;
+}
+
+.hlCardRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hlPrice {
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  color: rgba(244, 244, 245, 0.72);
+  font-weight: 900;
+}
+
+.hlPrice strong {
+  font-size: 14px;
+  color: rgba(244, 244, 245, 0.95);
+  font-weight: 950;
+}
+
+/* Botão “Jogar” usando as vars do app */
+.hlPlayBtn {
+  border-radius: 12px;
+  padding: 10px 14px;
+
+  background: var(--btn);
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  color: rgba(255, 255, 255, 0.92);
+
+  font-weight: 950;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hlPlayBtn:hover {
+  background: var(--btn-hover);
+}
+
+/* Bottom nav com o mesmo blur do topo */
+.hlBottomNav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  z-index: 40;
+  backdrop-filter: blur(12px);
+  background: rgba(10, 10, 12, 0.62);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+  display: flex;
+  justify-content: center;
+}
+
+.hlBottomNavInner {
+  width: min(520px, 100%);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 10px 10px 14px;
+  gap: 8px;
+}
+
+.hlNavItem {
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: transparent;
+
+  color: rgba(244, 244, 245, 0.72);
+  padding: 10px 8px;
+
+  cursor: pointer;
+  font-weight: 950;
+}
+
+.hlNavItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(244, 244, 245, 0.90);
+}
+
+.hlNavItem.active {
+  background: rgba(254, 240, 138, 0.16);
+  border-color: rgba(254, 240, 138, 0.22);
+  color: #fef08a;
+}
+
+/* Responsivo (evita quebrar barra e botões) */
+@media (max-width: 520px) {
+  .hlSearch {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hlSearchBtn {
+    width: 100%;
+  }
+}

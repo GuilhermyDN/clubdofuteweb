@@ -1,0 +1,290 @@
+@layer components {
+    .eqPage {
+        min-height: 100vh;
+        color: #f4f4f5;
+    }
+
+    .eqTop {
+        position: sticky;
+        top: 0;
+        z-index: 30;
+        backdrop-filter: blur(12px);
+        background: rgba(10, 10, 12, 0.62);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .eqTopInner {
+        width: min(1100px, calc(100% - 24px));
+        margin: 0 auto;
+        padding: 14px 0 12px;
+    }
+
+    .eqTitleRow {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .eqTitle {
+        font-weight: 950;
+        letter-spacing: -0.3px;
+        font-size: 18px;
+    }
+
+    .eqSub {
+        margin-top: 8px;
+        color: rgba(244, 244, 245, 0.72);
+        font-weight: 800;
+        line-height: 1.35;
+    }
+
+    .eqTopRight {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .eqGhostBtn {
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(244, 244, 245, 0.9);
+        padding: 10px 12px;
+        font-weight: 950;
+        cursor: pointer;
+    }
+
+    .eqContent {
+        padding: 16px 0 28px;
+    }
+
+    .eqWrap {
+        width: min(1100px, calc(100% - 24px));
+        margin: 0 auto;
+        padding-bottom: 92px;
+        /* espaço pro bottom nav */
+    }
+
+    .eqMsg {
+        border-radius: 16px;
+        padding: 12px 12px;
+        margin-bottom: 12px;
+        font-weight: 900;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        white-space: pre-wrap;
+    }
+
+    .eqMsg.ok {
+        background: rgba(167, 243, 208, 0.14);
+        border-color: rgba(167, 243, 208, 0.22);
+        color: #a7f3d0;
+    }
+
+    .eqMsg.err {
+        color: rgba(244, 244, 245, 0.88);
+    }
+
+    .eqGrid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+        align-items: start;
+    }
+
+    .eqCard {
+        border-radius: 18px;
+        background: rgba(31, 31, 31, 0.75);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+        padding: 14px;
+        margin-bottom: 14px;
+    }
+
+    .eqCardTitle {
+        font-weight: 950;
+        letter-spacing: -0.2px;
+        margin-bottom: 10px;
+    }
+
+    .eqForm {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .eqLabel {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-weight: 900;
+        color: rgba(244, 244, 245, 0.8);
+        font-size: 13px;
+    }
+
+    .eqInput,
+    .eqSelect {
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        padding: 12px 12px;
+        outline: none;
+        font-weight: 900;
+    }
+
+    .eqInput:focus,
+    .eqSelect:focus {
+        border-color: rgba(254, 240, 138, 0.25);
+        box-shadow: 0 0 0 3px rgba(254, 240, 138, 0.1);
+    }
+
+    .eqRow2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .eqBtn {
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(244, 244, 245, 0.9);
+        padding: 12px 12px;
+        font-weight: 950;
+        cursor: pointer;
+    }
+
+    .eqBtn.primary {
+        background: rgba(254, 240, 138, 0.16);
+        border-color: rgba(254, 240, 138, 0.26);
+        color: #fef08a;
+    }
+
+    .eqBtn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .eqSearchRow {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .eqSearchRow .eqInput {
+        flex: 1;
+    }
+
+    .eqList {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .eqEmpty {
+        color: rgba(244, 244, 245, 0.65);
+        font-weight: 800;
+        padding: 8px 2px;
+    }
+
+    .eqItem {
+        text-align: left;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.06);
+        padding: 12px;
+        cursor: pointer;
+    }
+
+    .eqItem.active {
+        background: rgba(254, 240, 138, 0.14);
+        border-color: rgba(254, 240, 138, 0.22);
+    }
+
+    .eqItemTitle {
+        font-weight: 950;
+    }
+
+    .eqItemSub {
+        margin-top: 6px;
+        color: rgba(244, 244, 245, 0.72);
+        font-weight: 850;
+        font-size: 13px;
+        line-height: 1.35;
+    }
+
+    .eqDetails {
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        padding-top: 12px;
+        margin-top: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .eqDetailsTitle {
+        font-weight: 950;
+    }
+
+    .eqDetailsRow {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .eqDetailsRow:first-of-type {
+        border-top: 0;
+    }
+
+    .eqBottomNav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 74px;
+        backdrop-filter: blur(12px);
+        background: rgba(10, 10, 12, 0.62);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        padding: 10px 12px;
+    }
+
+    .eqNavItem {
+        width: min(160px, 33%);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(244, 244, 245, 0.86);
+        font-weight: 950;
+        cursor: pointer;
+    }
+
+    .eqNavItem.active {
+        background: rgba(254, 240, 138, 0.16);
+        border-color: rgba(254, 240, 138, 0.22);
+        color: #fef08a;
+    }
+
+    @media (min-width: 980px) {
+        .eqGrid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    @media (max-width: 560px) {
+        .eqRow2 {
+            grid-template-columns: 1fr;
+        }
+
+        .eqSearchRow {
+            flex-direction: column;
+            align-items: stretch;
+        }
+    }
+}

@@ -1,0 +1,345 @@
+/* src/styles/eu.css */
+@layer components {
+    .euLoading {
+        padding: 30px 16px;
+        width: min(900px, 100%);
+        margin: 0 auto;
+        color: rgba(244, 244, 245, 0.8);
+        font-weight: 900;
+    }
+
+    .euShell {
+        min-height: 100vh;
+        padding: 18px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .euPanel {
+        width: min(900px, 100%);
+        border-radius: 18px;
+        background: rgba(31, 31, 31, 0.58);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+        overflow: hidden;
+        padding-bottom: 84px;
+    }
+
+    .euTopBar {
+        display: grid;
+        grid-template-columns: 44px 1fr 110px;
+        align-items: center;
+        padding: 12px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(10, 10, 12, 0.48);
+        backdrop-filter: blur(12px);
+    }
+
+    .euIconBtn {
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        cursor: pointer;
+        font-size: 20px;
+    }
+
+    .euTopTitle {
+        font-weight: 950;
+        letter-spacing: -0.2px;
+        justify-self: center;
+    }
+
+    .euGhostBtn {
+        justify-self: end;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(244, 244, 245, 0.9);
+        padding: 10px 12px;
+        font-weight: 950;
+        cursor: pointer;
+    }
+
+    .euHeader {
+        padding: 16px 14px 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .euAvatarWrap {
+        width: 78px;
+        height: 78px;
+        border-radius: 999px;
+        padding: 3px;
+        background: rgba(254, 240, 138, 0.14);
+        border: 1px solid rgba(254, 240, 138, 0.22);
+        display: grid;
+        place-items: center;
+    }
+
+    .euAvatarFallback {
+        width: 100%;
+        height: 100%;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        font-weight: 950;
+        letter-spacing: -0.3px;
+        color: #fef08a;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+    }
+
+    .euName {
+        font-weight: 950;
+        letter-spacing: -0.4px;
+        font-size: 18px;
+    }
+
+    .euSub {
+        color: rgba(244, 244, 245, 0.70);
+        font-weight: 800;
+        font-size: 13px;
+    }
+
+    .euMsg {
+        margin: 10px 12px 0;
+        border-radius: 16px;
+        padding: 12px 12px;
+        font-weight: 900;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        white-space: pre-wrap;
+    }
+
+    .euMsg.ok {
+        background: rgba(167, 243, 208, 0.14);
+        border-color: rgba(167, 243, 208, 0.22);
+        color: #a7f3d0;
+    }
+
+    .euMsg.err {
+        color: rgba(244, 244, 245, 0.88);
+    }
+
+    .euBody {
+        padding: 12px;
+        display: grid;
+        gap: 12px;
+    }
+
+    .euCard {
+        background: rgba(31, 31, 31, 0.70);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        border-radius: 18px;
+        padding: 14px;
+    }
+
+    .euCardTitle {
+        font-weight: 950;
+        letter-spacing: -0.2px;
+        margin-bottom: 10px;
+    }
+
+    .euRow {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .euRow:first-of-type {
+        border-top: 0;
+    }
+
+    .euRow span {
+        color: rgba(244, 244, 245, 0.75);
+        font-weight: 800;
+    }
+
+    .euRow strong {
+        font-weight: 950;
+    }
+
+    .euEllipsis {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 520px;
+    }
+
+    .euFormGrid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+    }
+
+    .euLabel {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-weight: 900;
+        color: rgba(244, 244, 245, 0.80);
+        font-size: 13px;
+    }
+
+    .euInput {
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        padding: 12px 12px;
+        outline: none;
+        font-weight: 900;
+    }
+
+    .euInput:focus {
+        border-color: rgba(254, 240, 138, 0.25);
+        box-shadow: 0 0 0 3px rgba(254, 240, 138, 0.10);
+    }
+
+    .euInput.isInvalid {
+        border-color: rgba(248, 113, 113, 0.35);
+        box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12);
+    }
+
+    .euBtn {
+        margin-top: 12px;
+        width: 100%;
+        border-radius: 16px;
+        padding: 12px 14px;
+        cursor: pointer;
+        font-weight: 950;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(244, 244, 245, 0.90);
+    }
+
+    .euBtn.primary {
+        background: rgba(254, 240, 138, 0.16);
+        border-color: rgba(254, 240, 138, 0.26);
+        color: #fef08a;
+    }
+
+    .euBtn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .euHint {
+        margin-top: 10px;
+        color: rgba(244, 244, 245, 0.55);
+        font-weight: 900;
+        font-size: 12px;
+    }
+
+    .euEmpty {
+        color: rgba(244, 244, 245, 0.72);
+        font-weight: 800;
+        padding: 6px 0;
+    }
+
+    .euTeamList {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .euTeamItem {
+        width: 100%;
+        text-align: left;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        cursor: pointer;
+    }
+
+    .euTeamLeft {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .euTeamName {
+        font-weight: 950;
+        letter-spacing: -0.2px;
+    }
+
+    .euTeamMeta {
+        color: rgba(244, 244, 245, 0.70);
+        font-weight: 800;
+        font-size: 13px;
+        line-height: 1.3;
+    }
+
+    .euTeamBadge {
+        flex: 0 0 auto;
+        font-size: 12px;
+        font-weight: 950;
+        padding: 8px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: rgba(244, 244, 245, 0.86);
+    }
+
+    .euTeamBadge.admin {
+        background: rgba(254, 240, 138, 0.16);
+        border-color: rgba(254, 240, 138, 0.22);
+        color: #fef08a;
+    }
+
+    .euBottomNav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 74px;
+        backdrop-filter: blur(12px);
+        background: rgba(10, 10, 12, 0.62);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        padding: 10px 12px;
+    }
+
+    .euNavBtn {
+        width: min(160px, 33%);
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(244, 244, 245, 0.86);
+        font-weight: 950;
+        cursor: pointer;
+    }
+
+    .euNavBtn.active {
+        background: rgba(254, 240, 138, 0.16);
+        border-color: rgba(254, 240, 138, 0.22);
+        color: #fef08a;
+    }
+
+    @media (max-width: 900px) {
+        .euFormGrid {
+            grid-template-columns: 1fr;
+        }
+
+        .euTopBar {
+            grid-template-columns: 44px 1fr 92px;
+        }
+    }
+}

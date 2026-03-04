@@ -1,0 +1,226 @@
+/* ===== Avaliação por TIME + GET /avaliacoes ===== */
+.avTPanel {
+    padding-bottom: 16px;
+}
+
+.avTBody {
+    padding: 14px;
+    display: grid;
+    gap: 12px;
+}
+
+.avTHeader {
+    display: grid;
+    gap: 4px;
+}
+
+.avTTitle {
+    font-weight: 900;
+    font-size: 16px;
+}
+
+.avTSub {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.avTTabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+@media (max-width: 900px) {
+    .avTTabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    .avTTabs {
+        grid-template-columns: 1fr;
+    }
+}
+
+.avTTab {
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(6, 49, 84, 0.35);
+    color: rgba(255, 255, 255, 0.92);
+    border-radius: 16px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: left;
+}
+
+.avTTab.isActive {
+    background: rgba(80, 170, 255, 0.22);
+    border-color: rgba(80, 170, 255, 0.45);
+}
+
+.avTTabTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 900;
+}
+
+.avTTabBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    font-weight: 900;
+}
+
+.avTTabSub {
+    margin-top: 6px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.62);
+}
+
+.avTCard {
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 18px;
+    background: rgba(0, 0, 0, 0.20);
+    padding: 12px;
+    display: grid;
+    gap: 12px;
+}
+
+.avTCardTop {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.avTCardTitle {
+    font-weight: 900;
+    font-size: 16px;
+}
+
+.avTCardMeta {
+    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 12px;
+}
+
+.avTScore {
+    text-align: right;
+}
+
+.avTScoreLabel {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.62);
+}
+
+.avTScoreValue {
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.avTNotice {
+    padding: 10px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 12px;
+}
+
+.avTNotice.ok {
+    background: rgba(80, 170, 255, 0.10);
+    border-color: rgba(80, 170, 255, 0.22);
+}
+
+.avTRoster {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 2px;
+}
+
+.avTRosterItem {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 260px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.86);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.avTRosterAvatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    font-weight: 900;
+}
+
+.avTRosterName {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.avTScale {
+    display: grid;
+    gap: 8px;
+}
+
+.avTScaleLabel {
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 12px;
+}
+
+.avTScaleBtns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.avTScaleBtn {
+    width: 38px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(6, 49, 84, 0.35);
+    color: rgba(255, 255, 255, 0.92);
+    cursor: pointer;
+    font-weight: 900;
+}
+
+.avTScaleBtn.isActive {
+    background: rgba(80, 170, 255, 0.22);
+    border-color: rgba(80, 170, 255, 0.45);
+}
+
+.avTScaleBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.avTLocked {
+    color: rgba(255, 255, 255, 0.62);
+    font-size: 12px;
+}
+
+.avTActions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}

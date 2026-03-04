@@ -1,0 +1,460 @@
+@layer components {
+  .ptdLoading {
+    padding: 30px 16px;
+    width: min(900px, 100%);
+    margin: 0 auto;
+    color: rgba(244, 244, 245, 0.8);
+    font-weight: 900;
+  }
+
+  .ptdShell {
+    min-height: 100vh;
+    padding: 18px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .ptdPanel {
+    width: min(900px, 100%);
+    border-radius: 18px;
+    background: rgba(31, 31, 31, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+  }
+
+  .ptdTopBar {
+    display: grid;
+    grid-template-columns: 44px 1fr 92px;
+    align-items: center;
+    padding: 12px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(10, 10, 12, 0.48);
+    backdrop-filter: blur(12px);
+  }
+
+  .ptdIconBtn {
+    width: 40px;
+    height: 40px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    cursor: pointer;
+    font-size: 20px;
+  }
+
+  .ptdTopTitle {
+    font-weight: 950;
+    letter-spacing: -0.2px;
+  }
+
+  .ptdTopRight {
+    width: 100%;
+    height: 1px;
+  }
+
+  .ptdGhostBtn {
+    justify-self: end;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(244, 244, 245, 0.9);
+    padding: 10px 12px;
+    font-weight: 950;
+    cursor: pointer;
+  }
+
+  .ptdBody {
+    padding: 12px;
+  }
+
+  .ptdMsg {
+    margin: 12px 12px 0;
+    border-radius: 16px;
+    padding: 12px 12px;
+    font-weight: 900;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    white-space: pre-wrap;
+  }
+
+  .ptdMsg.ok {
+    background: rgba(167, 243, 208, 0.14);
+    border-color: rgba(167, 243, 208, 0.22);
+    color: #a7f3d0;
+  }
+
+  .ptdMsg.err {
+    color: rgba(244, 244, 245, 0.88);
+  }
+
+  /* COVER */
+  .ptdCover {
+    position: relative;
+    height: 220px;
+  }
+
+  .ptdCover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .ptdCoverOverlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(10, 10, 12, 0.88),
+      rgba(10, 10, 12, 0.12)
+    );
+  }
+
+  .ptdCoverText {
+    position: absolute;
+    left: 14px;
+    bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ptdCoverTitle {
+    font-weight: 950;
+    letter-spacing: -0.2px;
+    font-size: 18px;
+    text-transform: capitalize;
+  }
+
+  .ptdCoverSub {
+    color: rgba(244, 244, 245, 0.72);
+    font-weight: 900;
+    font-size: 12px;
+  }
+
+  /* HEADER */
+  .ptdHeader {
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .ptdHeaderLeft {
+    min-width: 0;
+  }
+
+  .ptdName {
+    font-weight: 950;
+    letter-spacing: -0.2px;
+    font-size: 18px;
+  }
+
+  .ptdMetaLine {
+    margin-top: 6px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    color: rgba(244, 244, 245, 0.72);
+    font-weight: 900;
+    font-size: 13px;
+  }
+
+  .ptdDot {
+    color: rgba(254, 240, 138, 0.95);
+  }
+
+  .ptdHeaderRight {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  .ptdBadgeStatus {
+    font-size: 12px;
+    font-weight: 950;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(244, 244, 245, 0.9);
+  }
+
+  .ptdBadgeSmall {
+    font-size: 12px;
+    font-weight: 950;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(254, 240, 138, 0.12);
+    border: 1px solid rgba(254, 240, 138, 0.2);
+    color: #fef08a;
+  }
+
+  /* CHIPS */
+  .ptdChips {
+    padding: 0 12px 12px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .ptdChip {
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 12px;
+    min-width: 0;
+  }
+
+  .ptdChipLabel {
+    font-size: 11px;
+    font-weight: 900;
+    color: rgba(244, 244, 245, 0.65);
+  }
+
+  .ptdChipValue {
+    margin-top: 6px;
+    font-weight: 950;
+    color: rgba(244, 244, 245, 0.92);
+  }
+
+  /* SECTION */
+  .ptdSectionTitle {
+    padding: 0 12px;
+    margin-top: 6px;
+    font-weight: 950;
+    letter-spacing: -0.2px;
+  }
+
+  /* STATS */
+  .ptdStatsRow {
+    padding: 10px 12px 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .ptdStat {
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 12px;
+  }
+
+  .ptdStatLabel {
+    font-size: 11px;
+    font-weight: 900;
+    color: rgba(244, 244, 245, 0.65);
+  }
+
+  .ptdStatValue {
+    margin-top: 6px;
+    font-weight: 950;
+  }
+
+  /* BUTTONS */
+  .ptdCtaRow {
+    padding: 10px 12px 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .ptdBtn {
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(244, 244, 245, 0.9);
+    padding: 12px 12px;
+    font-weight: 950;
+    cursor: pointer;
+  }
+
+  .ptdBtn.primary {
+    background: rgba(254, 240, 138, 0.16);
+    border-color: rgba(254, 240, 138, 0.26);
+    color: #fef08a;
+  }
+
+  .ptdBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* TABLE */
+  .ptdTable {
+    padding: 10px 12px 0;
+  }
+
+  .ptdTr {
+    display: grid;
+    grid-template-columns: 140px 1fr 90px;
+    gap: 10px;
+    align-items: center;
+    padding: 12px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 10px;
+  }
+
+  .ptdTh {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.08);
+    font-weight: 950;
+    color: rgba(244, 244, 245, 0.75);
+  }
+
+  .ptdTr.isActive {
+    background: rgba(167, 243, 208, 0.1);
+    border-color: rgba(167, 243, 208, 0.18);
+  }
+
+  .ptdTd {
+    font-weight: 900;
+    color: rgba(244, 244, 245, 0.9);
+    min-width: 0;
+  }
+
+  .ptdNameCell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .muted {
+    color: rgba(244, 244, 245, 0.65);
+  }
+
+  .ptdEmpty {
+    color: rgba(244, 244, 245, 0.7);
+    font-weight: 900;
+    padding: 10px 2px;
+  }
+
+  /* TIMES */
+  .ptdTimesMeta {
+    padding: 10px 12px 0;
+  }
+
+  .ptdTimesLine {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 900;
+  }
+
+  .ptdTimesGrid {
+    padding: 10px 12px 14px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .ptdTeamCard {
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.06);
+    padding: 12px;
+    min-width: 0;
+  }
+
+  .ptdTeamTitle {
+    font-weight: 950;
+    margin-bottom: 10px;
+  }
+
+  .ptdTeamList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ptdTeamRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-weight: 900;
+  }
+
+  .ptdTeamName {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ptdTeamNota {
+    font-weight: 950;
+    color: #fef08a;
+  }
+
+  /* FOOTER BOX (quando não tem times) */
+  .ptdFooterBox {
+    margin: 10px 12px 16px;
+    padding: 12px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ptdFooterTitle {
+    font-weight: 950;
+  }
+
+  .ptdFooterText {
+    color: rgba(244, 244, 245, 0.7);
+    font-weight: 900;
+  }
+
+  @media (max-width: 820px) {
+    .ptdChips {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .ptdHeader {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .ptdHeaderRight {
+      align-items: flex-start;
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+
+    .ptdStatsRow {
+      grid-template-columns: 1fr;
+    }
+
+    .ptdCtaRow {
+      grid-template-columns: 1fr;
+    }
+
+    .ptdTr {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+
+    .ptdTimesGrid {
+      grid-template-columns: 1fr;
+    }
+  }
+}
