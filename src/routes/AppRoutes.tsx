@@ -3,7 +3,6 @@ import LoginPage from "../pages/Login";
 import Register from "../pages/Register";
 import Home from "../pages/Home";
 import Eu from "../pages/Eu";
-import HomeLogado from "../pages/HomeLogado";
 import EquipeDetalhe from "../pages/EquipeDetalhe";
 import PartidaDetalhePage from "../pages/PartidaDetalhe";
 import EquipePartidasPage from "../pages/EquipePartidas";
@@ -23,8 +22,7 @@ export default function AppRoutes() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<Register />} />
         <Route path="/eu" element={<Eu />} />
-        <Route path="/home-logado" element={<HomeLogado />} />
-        <Route path="/equipes/:equipeId" element={<EquipeDetalhe />} />
+       <Route path="/equipes/:equipeId" element={<EquipeDetalhe />} />
         <Route path="/partidas/:partidaId" element={<PartidaDetalhePage />} />
         <Route path="/equipes/:equipeId/partidas" element={<EquipePartidasPage />} />
         <Route path="/partidas/:partidaId" element={<PartidaDetalhePage />} />

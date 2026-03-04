@@ -1,226 +1,736 @@
-/* ===== Avaliação por TIME + GET /avaliacoes ===== */
-.avTPanel {
-    padding-bottom: 16px;
+:root {
+    --av2-bg0: #06131f;
+    --av2-bg1: #081a29;
+
+    --av2-stroke: rgba(255, 255, 255, 0.10);
+
+    --av2-text: rgba(255, 255, 255, 0.92);
+    --av2-muted: rgba(255, 255, 255, 0.62);
+
+    --av2-accent: rgba(104, 116, 70, 0.92);
+    --av2-accent2: rgba(118, 132, 78, 0.98);
+
+    --av2-danger: rgba(220, 70, 70, 0.95);
+    --av2-ok: rgba(74, 190, 130, 0.95);
+
+    --av2-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+    --av2-radius: 18px;
 }
 
-.avTBody {
-    padding: 14px;
+.av2Shell {
+    min-height: 100vh;
+    padding: 22px 14px 60px;
+    background:
+        radial-gradient(1200px 700px at 18% -10%, rgba(120, 180, 255, 0.16), transparent 55%),
+        radial-gradient(900px 600px at 85% 10%, rgba(190, 220, 120, 0.10), transparent 55%),
+        linear-gradient(180deg, var(--av2-bg0), var(--av2-bg1));
+    color: var(--av2-text);
+    display: flex;
+    justify-content: center;
+}
+
+.av2Card {
+    width: min(1120px, 100%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+    border: 1px solid var(--av2-stroke);
+    border-radius: var(--av2-radius);
+    box-shadow: var(--av2-shadow);
+    overflow: hidden;
+}
+
+.av2Center {
+    padding: 26px;
     display: grid;
-    gap: 12px;
-}
-
-.avTHeader {
-    display: grid;
-    gap: 4px;
-}
-
-.avTTitle {
-    font-weight: 900;
-    font-size: 16px;
-}
-
-.avTSub {
-    color: rgba(255, 255, 255, 0.62);
-    font-size: 12px;
-    line-height: 1.35;
-}
-
-.avTTabs {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    place-items: center;
     gap: 10px;
 }
 
-@media (max-width: 900px) {
-    .avTTabs {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+.av2Spinner {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.18);
+    border-top-color: rgba(255, 255, 255, 0.72);
+    animation: av2spin 900ms linear infinite;
+}
+
+@keyframes av2spin {
+    to {
+        transform: rotate(360deg);
     }
 }
 
-@media (max-width: 560px) {
-    .avTTabs {
-        grid-template-columns: 1fr;
-    }
-}
-
-.avTTab {
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    background: rgba(6, 49, 84, 0.35);
-    color: rgba(255, 255, 255, 0.92);
-    border-radius: 16px;
-    padding: 10px;
-    cursor: pointer;
-    text-align: left;
-}
-
-.avTTab.isActive {
-    background: rgba(80, 170, 255, 0.22);
-    border-color: rgba(80, 170, 255, 0.45);
-}
-
-.avTTabTop {
-    display: flex;
-    justify-content: space-between;
+/* TOP */
+.av2Top {
+    padding: 22px 28px;
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
     align-items: center;
-    font-weight: 900;
+    gap: 18px;
+    min-height: 170px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.10));
 }
 
-.avTTabBadge {
+.av2TopRight {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.av2Brand {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    min-width: 0;
+}
+
+.av2Logo {
+    height: 152px;
+    width: 152px;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.40));
+}
+
+.av2TitleWrap {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+.av2Title {
+    font-weight: 900;
+    letter-spacing: 0.2px;
+    font-size: 22px;
+    line-height: 1.05;
+}
+
+.av2Muted {
+    color: var(--av2-muted);
+    font-size: 14px;
+}
+
+/* Buttons */
+.av2IconBtn {
+    height: 44px;
+    width: 44px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--av2-text);
+    cursor: pointer;
+    transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, opacity 140ms ease;
+}
+
+.av2IconBtn:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+.av2Btn,
+.av2BtnSmall {
+    border: 0;
+    background: var(--av2-accent);
+    color: rgba(255, 255, 255, 0.94);
+    font-weight: 950;
+    cursor: pointer;
+    transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
+}
+
+.av2Btn {
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 14px;
+}
+
+.av2BtnSmall {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+
+.av2Btn:hover,
+.av2BtnSmall:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+}
+
+.av2Btn:disabled,
+.av2BtnSmall:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    filter: none;
+}
+
+.av2BtnGhost {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* HERO */
+.av2Hero {
+    position: relative;
+    height: 240px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.av2HeroBg {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(900px 420px at 15% 20%, rgba(120, 180, 255, 0.18), transparent 55%),
+        radial-gradient(900px 420px at 85% 10%, rgba(190, 220, 120, 0.12), transparent 55%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+}
+
+.av2HeroImg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.40;
+    transform: scale(1.02);
+}
+
+.av2HeroOverlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.62));
+}
+
+.av2HeroContent {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    padding: 18px 16px;
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 14px;
+    align-items: end;
+}
+
+.av2HeroTitle {
+    font-size: 26px;
+    font-weight: 950;
+    letter-spacing: 0.2px;
+    line-height: 1.05;
+    text-shadow: 0 14px 42px rgba(0, 0, 0, 0.55);
+    text-transform: capitalize;
+}
+
+.av2HeroSub {
+    margin-top: 8px;
+    font-size: 16px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.88);
+}
+
+.av2Pills {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.av2Pill {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    min-width: 34px;
-    height: 26px;
-    padding: 0 8px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.08);
-    font-weight: 900;
-}
-
-.avTTabSub {
-    margin-top: 6px;
+    padding: 8px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.62);
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    backdrop-filter: blur(10px);
 }
 
-.avTCard {
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    border-radius: 18px;
-    background: rgba(0, 0, 0, 0.20);
-    padding: 12px;
+.av2PillSoft {
+    opacity: 0.92;
+}
+
+.av2PillLock {
+    border-color: rgba(220, 70, 70, 0.22);
+    background: rgba(220, 70, 70, 0.10);
+}
+
+.av2HeroRight {
     display: grid;
-    gap: 12px;
+    gap: 10px;
+    justify-items: end;
 }
 
-.avTCardTop {
+.av2Stat {
+    width: 100%;
+    max-width: 320px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.18);
+    border-radius: 14px;
+    padding: 12px 12px;
+    backdrop-filter: blur(10px);
+}
+
+.av2StatLabel {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.av2StatValue {
+    margin-top: 4px;
+    font-size: 22px;
+    font-weight: 950;
+    letter-spacing: 0.2px;
+}
+
+/* Alerts */
+.av2Alert {
+    margin: 14px 16px 0;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 12px 12px;
+    display: grid;
+    grid-template-columns: 1fr 28px;
+    gap: 10px;
+    align-items: start;
+}
+
+.av2AlertOk {
+    background: rgba(74, 190, 130, 0.10);
+    border-color: rgba(74, 190, 130, 0.22);
+}
+
+.av2AlertErr {
+    background: rgba(220, 70, 70, 0.10);
+    border-color: rgba(220, 70, 70, 0.22);
+}
+
+.av2AlertTitle {
+    font-weight: 950;
+    font-size: 13px;
+}
+
+.av2AlertText {
+    margin-top: 4px;
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.82);
+    overflow-wrap: anywhere;
+}
+
+.av2AlertClose {
+    height: 28px;
+    width: 28px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.92);
+    cursor: pointer;
+}
+
+/* Body */
+.av2Body {
+    padding: 14px 16px 0;
+}
+
+.av2Notice {
+    margin-top: 10px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(0, 0, 0, 0.12);
+    padding: 12px 12px;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.av2Notice.ok {
+    background: rgba(74, 190, 130, 0.10);
+    border-color: rgba(74, 190, 130, 0.22);
+}
+
+.av2Tabs {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.av2Tab {
+    text-align: left;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 16px;
+    padding: 12px 12px;
+    cursor: pointer;
+    transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.av2Tab:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+.av2Tab.isActive {
+    border-color: rgba(190, 220, 120, 0.22);
+    background: rgba(190, 220, 120, 0.08);
+}
+
+.av2Tab.hasNote .av2TabBadge {
+    border-color: rgba(74, 190, 130, 0.22);
+    background: rgba(74, 190, 130, 0.10);
+}
+
+.av2TabTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.av2TabName {
+    font-weight: 950;
+}
+
+.av2TabBadge {
+    min-width: 34px;
+    height: 28px;
+    display: inline-grid;
+    place-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    font-weight: 950;
+}
+
+.av2TabSub {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.70);
+    font-size: 12px;
+}
+
+/* Main grid */
+.av2MainGrid {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: 1.35fr 0.65fr;
+    gap: 10px;
+    align-items: start;
+}
+
+.av2MainCard,
+.av2SideCard {
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 16px;
+    padding: 12px 12px;
+    min-width: 0;
+}
+
+.av2MainTop {
     display: flex;
     justify-content: space-between;
     gap: 12px;
-    align-items: flex-start;
+    align-items: start;
 }
 
-.avTCardTitle {
-    font-weight: 900;
+.av2MainTitle {
+    font-weight: 950;
     font-size: 16px;
 }
 
-.avTCardMeta {
-    margin-top: 4px;
-    color: rgba(255, 255, 255, 0.62);
-    font-size: 12px;
+.av2MainMeta {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 12.5px;
 }
 
-.avTScore {
+.av2Score {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.18);
+    border-radius: 14px;
+    padding: 10px 12px;
+    min-width: 110px;
     text-align: right;
 }
 
-.avTScoreLabel {
+.av2ScoreLabel {
     font-size: 12px;
-    color: rgba(255, 255, 255, 0.62);
+    color: rgba(255, 255, 255, 0.72);
 }
 
-.avTScoreValue {
+.av2ScoreValue {
+    margin-top: 4px;
     font-size: 22px;
-    font-weight: 900;
+    font-weight: 950;
 }
 
-.avTNotice {
-    padding: 10px;
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.82);
-    font-size: 12px;
+/* Roster */
+.av2Roster {
+    margin-top: 12px;
 }
 
-.avTNotice.ok {
-    background: rgba(80, 170, 255, 0.10);
-    border-color: rgba(80, 170, 255, 0.22);
-}
-
-.avTRoster {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding-top: 2px;
-}
-
-.avTRosterItem {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    max-width: 260px;
-    padding: 6px 10px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    font-size: 12px;
+.av2RosterTitle {
+    font-weight: 950;
+    font-size: 13px;
     color: rgba(255, 255, 255, 0.86);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-.avTRosterAvatar {
-    width: 22px;
-    height: 22px;
-    border-radius: 8px;
+.av2RosterGrid {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.av2Player {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 14px;
+    padding: 10px 10px;
+    min-width: 0;
+}
+
+.av2Avatar {
+    height: 34px;
+    width: 34px;
+    border-radius: 12px;
     display: grid;
     place-items: center;
-    background: rgba(255, 255, 255, 0.08);
-    font-weight: 900;
+    font-weight: 950;
+    background: linear-gradient(135deg, rgba(120, 180, 255, 0.22), rgba(190, 220, 120, 0.14));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.92);
+    flex: 0 0 auto;
 }
 
-.avTRosterName {
+.av2PlayerName {
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.avTScale {
+/* Scale */
+.av2Scale {
+    margin-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 12px;
+}
+
+.av2ScaleHead {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: baseline;
+}
+
+.av2ScaleLabel {
+    font-weight: 950;
+}
+
+.av2ScaleHint {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.70);
+}
+
+.av2ScaleBtns {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(11, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.av2ScaleBtn {
+    height: 38px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.92);
+    font-weight: 950;
+    cursor: pointer;
+    transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, opacity 140ms ease;
+}
+
+.av2ScaleBtn:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+.av2ScaleBtn.isActive {
+    border-color: rgba(190, 220, 120, 0.22);
+    background: rgba(190, 220, 120, 0.12);
+}
+
+.av2ScaleBtn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.av2NavRow {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+/* Side */
+.av2SideTitle {
+    font-weight: 950;
+    font-size: 14px;
+}
+
+.av2SideList {
+    margin-top: 10px;
     display: grid;
     gap: 8px;
 }
 
-.avTScaleLabel {
-    font-weight: 800;
-    color: rgba(255, 255, 255, 0.78);
-    font-size: 12px;
-}
-
-.avTScaleBtns {
+.av2SideRow {
     display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-.avTScaleBtn {
-    width: 38px;
-    height: 34px;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    background: rgba(6, 49, 84, 0.35);
-    color: rgba(255, 255, 255, 0.92);
-    cursor: pointer;
-    font-weight: 900;
-}
-
-.avTScaleBtn.isActive {
-    background: rgba(80, 170, 255, 0.22);
-    border-color: rgba(80, 170, 255, 0.45);
-}
-
-.avTScaleBtn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.avTLocked {
-    color: rgba(255, 255, 255, 0.62);
-    font-size: 12px;
-}
-
-.avTActions {
-    display: flex;
+    justify-content: space-between;
     gap: 10px;
-    flex-wrap: wrap;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 14px;
+    padding: 10px 10px;
+}
+
+.av2SideRow.has {
+    border-color: rgba(74, 190, 130, 0.18);
+    background: rgba(74, 190, 130, 0.06);
+}
+
+.av2SideName {
+    font-weight: 950;
+}
+
+.av2SideSub {
+    margin-top: 2px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.70);
+}
+
+.av2SideRight {
+    font-weight: 950;
+    min-width: 34px;
+    text-align: right;
+}
+
+.av2Actions {
+    margin-top: 12px;
+    display: grid;
+    gap: 10px;
+}
+
+.av2Btn.primary {
+    background: var(--av2-accent2);
+}
+
+.av2FinePrint {
+    margin-top: 10px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.62);
+    line-height: 1.35;
+}
+
+/* Footer */
+.av2Footer {
+    margin-top: 14px;
+    padding: 14px 16px 16px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.10);
+}
+
+.av2Empty {
+    padding: 16px 14px;
+    border-radius: 16px;
+    border: 1px dashed rgba(255, 255, 255, 0.16);
+    background: rgba(0, 0, 0, 0.10);
+    color: rgba(255, 255, 255, 0.78);
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+    .av2HeroContent {
+        grid-template-columns: 1fr;
+    }
+
+    .av2HeroRight {
+        justify-items: start;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .av2Tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .av2MainGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .av2ScaleBtns {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .av2Logo {
+        height: 90px;
+        width: 90px;
+    }
+
+    .av2Top {
+        min-height: 130px;
+        padding: 18px 18px;
+    }
+
+    .av2Title {
+        font-size: 18px;
+    }
+
+    .av2Muted {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 520px) {
+    .av2Hero {
+        height: 270px;
+    }
+
+    .av2HeroRight {
+        grid-template-columns: 1fr;
+    }
+
+    .av2Tabs {
+        grid-template-columns: 1fr;
+    }
+
+    .av2Logo {
+        height: 70px;
+        width: 70px;
+    }
+
+    .av2Footer {
+        flex-direction: column;
+    }
+
+    .av2ScaleBtns {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .av2RosterGrid {
+        grid-template-columns: 1fr;
+    }
 }

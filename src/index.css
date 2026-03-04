@@ -2208,4 +2208,22 @@ body::after {
   .successCta:active {
     transform: translateY(1px);
   }
+
+  .eqSelect {
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    padding: 12px;
+    font-weight: 900;
+
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+  }
+
+  .eqSelect option {
+    background: #1f1f1f;
+    color: #fff;
+  }
 }

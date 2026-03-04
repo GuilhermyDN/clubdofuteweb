@@ -18,7 +18,7 @@ type EuResponse = {
 type MinhaEquipeResumo = {
     id: number;
     nome: string;
-    esporte: "VOLEI" | "FUTEBOL" | "FUTEVOLEI" | string;
+    esporte: "VOLEI" | "FUTEVOLEI" | string;
     statusEquipe: "ABERTA" | "FECHADA" | string;
     totalMembros: number;
 };
@@ -217,7 +217,17 @@ export default function EuPage() {
                 {/* NAVBAR SUPERIOR */}
 
                 <div className="euTopBar">
-                    <div className="euTopTitle">Meu perfil</div>
+                    <div className="euBrand">
+                        <img
+                            src="/logo-oficial.png"
+                            alt="logo"
+                            className="euLogo"
+                        />
+
+                        <span className="euTopTitle">
+                            Perfil
+                        </span>
+                    </div>
 
                     <div className="euNavGroup">
                         <button

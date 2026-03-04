@@ -1,0 +1,689 @@
+/* src/pages/EquipePartidasPage.css */
+
+:root {
+    --pd2-bg0: #06131f;
+    --pd2-bg1: #081a29;
+
+    --pd2-stroke: rgba(255, 255, 255, 0.10);
+
+    --pd2-text: rgba(255, 255, 255, 0.92);
+    --pd2-muted: rgba(255, 255, 255, 0.62);
+
+    --pd2-accent: rgba(104, 116, 70, 0.92);
+    --pd2-accent2: rgba(118, 132, 78, 0.98);
+
+    --pd2-danger: rgba(220, 70, 70, 0.95);
+    --pd2-ok: rgba(74, 190, 130, 0.95);
+
+    --pd2-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+    --pd2-radius: 18px;
+}
+
+.pd2Shell {
+    min-height: 100vh;
+    padding: 22px 14px 60px;
+    background:
+        radial-gradient(1200px 700px at 18% -10%, rgba(120, 180, 255, 0.16), transparent 55%),
+        radial-gradient(900px 600px at 85% 10%, rgba(190, 220, 120, 0.10), transparent 55%),
+        linear-gradient(180deg, var(--pd2-bg0), var(--pd2-bg1));
+    color: var(--pd2-text);
+    display: flex;
+    justify-content: center;
+}
+
+.pd2Card {
+    width: min(1040px, 100%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+    border: 1px solid var(--pd2-stroke);
+    border-radius: var(--pd2-radius);
+    box-shadow: var(--pd2-shadow);
+    overflow: hidden;
+}
+
+.pd2Center {
+    padding: 26px;
+    display: grid;
+    place-items: center;
+    gap: 10px;
+}
+
+.pd2Spinner {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.18);
+    border-top-color: rgba(255, 255, 255, 0.72);
+    animation: pd2spin 900ms linear infinite;
+}
+
+@keyframes pd2spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* TOP (logo 152px) */
+.pd2Top {
+    padding: 22px 28px;
+    display: grid;
+    grid-template-columns: 60px 1fr auto;
+    align-items: center;
+    gap: 18px;
+    min-height: 170px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.10));
+}
+
+.pd2TopRight {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.pd2Brand {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    min-width: 0;
+}
+
+.pd2Logo {
+    height: 152px;
+    width: 152px;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.40));
+}
+
+.pd2TitleWrap {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+.pd2Title {
+    font-weight: 900;
+    letter-spacing: 0.2px;
+    font-size: 22px;
+    line-height: 1.05;
+}
+
+.pd2Muted {
+    color: var(--pd2-muted);
+    font-size: 14px;
+}
+
+/* Buttons */
+.pd2IconBtn {
+    height: 44px;
+    width: 44px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--pd2-text);
+    cursor: pointer;
+    transition: transform 140ms ease, background 140ms ease, border-color 140ms ease, opacity 140ms ease;
+}
+
+.pd2IconBtn:hover {
+    transform: translateY(-1px);
+    background: rgba(255, 255, 255, 0.10);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+.pd2Btn {
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 14px;
+    border: 0;
+    background: var(--pd2-accent);
+    color: rgba(255, 255, 255, 0.94);
+    font-weight: 950;
+    cursor: pointer;
+    transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
+}
+
+.pd2Btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+}
+
+.pd2Btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.pd2BtnGhost {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.pd2BtnSmall {
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 0;
+    background: var(--pd2-accent);
+    color: rgba(255, 255, 255, 0.94);
+    font-weight: 950;
+    cursor: pointer;
+    transition: transform 140ms ease, filter 140ms ease, opacity 140ms ease;
+    white-space: nowrap;
+}
+
+.pd2BtnSmall:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+}
+
+.pd2BtnSmall:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* HERO */
+.pd2Hero {
+    position: relative;
+    height: 240px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pd2HeroBg {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(900px 420px at 15% 20%, rgba(120, 180, 255, 0.18), transparent 55%),
+        radial-gradient(900px 420px at 85% 10%, rgba(190, 220, 120, 0.12), transparent 55%),
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+}
+
+.pd2HeroImg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.40;
+    transform: scale(1.02);
+}
+
+.pd2HeroOverlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.62));
+}
+
+.pd2HeroContent {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    padding: 18px 16px;
+    display: grid;
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 14px;
+    align-items: end;
+}
+
+.pd2HeroTitle {
+    font-size: 26px;
+    font-weight: 950;
+    letter-spacing: 0.2px;
+    line-height: 1.05;
+    text-shadow: 0 14px 42px rgba(0, 0, 0, 0.55);
+}
+
+.pd2HeroSub {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.pd2Pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    backdrop-filter: blur(10px);
+}
+
+.pd2PillSoft {
+    opacity: 0.92;
+}
+
+.pd2PillAdmin {
+    border-color: rgba(190, 220, 120, 0.20);
+    background: rgba(190, 220, 120, 0.10);
+}
+
+.pd2HeroRight {
+    display: grid;
+    gap: 10px;
+    justify-items: end;
+}
+
+.pd2Stat {
+    width: 100%;
+    max-width: 320px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.18);
+    border-radius: 14px;
+    padding: 12px 12px;
+    backdrop-filter: blur(10px);
+}
+
+.pd2StatLabel {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.pd2StatValue {
+    margin-top: 4px;
+    font-size: 22px;
+    font-weight: 950;
+    letter-spacing: 0.2px;
+}
+
+/* Alerts */
+.pd2Alert {
+    margin: 14px 16px 0;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 12px 12px;
+    display: grid;
+    grid-template-columns: 1fr 28px;
+    gap: 10px;
+    align-items: start;
+}
+
+.pd2AlertOk {
+    background: rgba(74, 190, 130, 0.10);
+    border-color: rgba(74, 190, 130, 0.22);
+}
+
+.pd2AlertErr {
+    background: rgba(220, 70, 70, 0.10);
+    border-color: rgba(220, 70, 70, 0.22);
+}
+
+.pd2AlertTitle {
+    font-weight: 950;
+    font-size: 13px;
+}
+
+.pd2AlertText {
+    margin-top: 4px;
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.82);
+    overflow-wrap: anywhere;
+}
+
+.pd2AlertClose {
+    height: 28px;
+    width: 28px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.92);
+    cursor: pointer;
+}
+
+/* Sections */
+.pd2SectionHead {
+    margin-top: 10px;
+    padding: 12px 16px 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 12px;
+}
+
+.pd2SectionTitle {
+    font-size: 16px;
+    font-weight: 950;
+}
+
+.pd2SectionRight {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pd2CountBadge {
+    padding: 8px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 12px;
+    font-weight: 900;
+}
+
+/* Note */
+.pd2Note {
+    margin: 8px 16px 0;
+    padding: 12px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(0, 0, 0, 0.12);
+    color: rgba(255, 255, 255, 0.82);
+}
+
+/* Form */
+.pd2Form {
+    margin: 8px 16px 0;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(0, 0, 0, 0.12);
+    padding: 12px 12px;
+    position: relative;
+}
+
+.pd2FormGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.pd2FieldCard {
+    border-radius: 14px;
+    padding: 10px 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.pd2FieldLabel {
+    font-size: 10px;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.55);
+    letter-spacing: 0.22px;
+}
+
+.pd2Hint {
+    color: rgba(255, 255, 255, 0.45);
+    font-weight: 900;
+}
+
+.pd2Field {
+    width: 100%;
+    border-radius: 12px;
+    padding: 12px 12px;
+    outline: none;
+    font-weight: 900;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.pd2Field:focus {
+    border-color: rgba(190, 220, 120, 0.22);
+    box-shadow: 0 0 0 3px rgba(190, 220, 120, 0.10);
+}
+
+.pd2FieldHelp {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.pd2Actions {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.pd2FormBusy {
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.20);
+    backdrop-filter: blur(2px);
+    pointer-events: none;
+}
+
+/* Pager */
+.pd2Pager {
+    margin: 10px 16px 2px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(0, 0, 0, 0.12);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.pd2PagerInfo {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.pd2PagerBtns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.pd2PagerPage {
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+/* List */
+.pd2Empty {
+    margin: 10px 16px 14px;
+    padding: 16px 14px;
+    border-radius: 16px;
+    border: 1px dashed rgba(255, 255, 255, 0.16);
+    background: rgba(0, 0, 0, 0.10);
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.pd2List {
+    padding: 8px 16px 14px;
+    display: grid;
+    gap: 10px;
+}
+
+.pd2Row {
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(0, 0, 0, 0.12);
+    border-radius: 16px;
+    padding: 12px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+}
+
+.pd2Row:hover {
+    transform: translateY(-1px);
+    background: rgba(0, 0, 0, 0.16);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+.pd2RowLeft {
+    min-width: 0;
+}
+
+.pd2Badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 900;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.80);
+}
+
+.pd2BadgeFuture {
+    border-color: rgba(190, 220, 120, 0.22);
+    background: rgba(190, 220, 120, 0.10);
+}
+
+.pd2BadgePast {
+    border-color: rgba(120, 180, 255, 0.22);
+    background: rgba(120, 180, 255, 0.10);
+}
+
+.pd2RowTitle {
+    margin-top: 8px;
+    font-weight: 950;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pd2RowId {
+    opacity: 0.65;
+    font-weight: 950;
+}
+
+.pd2RowSub {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 12.5px;
+}
+
+.pd2RowRight {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.pd2Metric {
+    text-align: right;
+    min-width: 110px;
+}
+
+.pd2MetricLabel {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.62);
+    font-weight: 900;
+}
+
+.pd2MetricValue {
+    margin-top: 4px;
+    font-size: 18px;
+    font-weight: 950;
+}
+
+.pd2Chevron {
+    height: 34px;
+    width: 34px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* Footer */
+.pd2Footer {
+    padding: 14px 16px 16px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.10);
+}
+
+/* Responsive */
+@media (max-width: 920px) {
+    .pd2HeroContent {
+        grid-template-columns: 1fr;
+        align-items: end;
+    }
+
+    .pd2HeroRight {
+        justify-items: start;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .pd2FormGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .pd2Actions {
+        grid-template-columns: 1fr;
+    }
+
+    .pd2Top {
+        min-height: 130px;
+        padding: 18px 18px;
+        grid-template-columns: 60px 1fr auto;
+    }
+
+    .pd2Logo {
+        height: 90px;
+        width: 90px;
+    }
+
+    .pd2Title {
+        font-size: 18px;
+    }
+
+    .pd2Muted {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 520px) {
+    .pd2Hero {
+        height: 270px;
+    }
+
+    .pd2HeroRight {
+        grid-template-columns: 1fr;
+    }
+
+    .pd2Row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .pd2RowRight {
+        justify-content: space-between;
+    }
+
+    .pd2Pager {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .pd2PagerBtns {
+        justify-content: flex-start;
+    }
+
+    .pd2Logo {
+        height: 70px;
+        width: 70px;
+    }
+}

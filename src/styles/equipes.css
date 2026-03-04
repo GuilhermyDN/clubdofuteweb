@@ -1,79 +1,95 @@
 @layer components {
+
     .eqPage {
         min-height: 100vh;
         color: #f4f4f5;
     }
 
+    /* NAVBAR */
+
     .eqTop {
         position: sticky;
         top: 0;
-        z-index: 30;
-        backdrop-filter: blur(12px);
-        background: rgba(10, 10, 12, 0.62);
+        z-index: 40;
+
+        backdrop-filter: blur(14px);
+        background: rgba(10, 10, 12, 0.75);
+
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .eqTopInner {
-        width: min(1100px, calc(100% - 24px));
+        width: min(1100px, calc(100% - 32px));
         margin: 0 auto;
-        padding: 14px 0 12px;
+        padding: 16px 0;
     }
 
     .eqTitleRow {
         display: flex;
-        align-items: flex-start;
         justify-content: space-between;
-        gap: 12px;
+        align-items: center;
     }
 
     .eqTitle {
+        font-size: 20px;
         font-weight: 950;
         letter-spacing: -0.3px;
-        font-size: 18px;
     }
 
     .eqSub {
-        margin-top: 8px;
-        color: rgba(244, 244, 245, 0.72);
-        font-weight: 800;
-        line-height: 1.35;
+        margin-top: 6px;
+        color: rgba(244, 244, 245, 0.65);
+        font-weight: 700;
+        font-size: 13px;
     }
+
+    /* NAV */
 
     .eqTopRight {
         display: flex;
         gap: 10px;
-        align-items: center;
     }
 
     .eqGhostBtn {
         border-radius: 14px;
         border: 1px solid rgba(255, 255, 255, 0.12);
         background: rgba(255, 255, 255, 0.06);
-        color: rgba(244, 244, 245, 0.9);
-        padding: 10px 12px;
-        font-weight: 950;
+
+        color: #f4f4f5;
+
+        padding: 10px 14px;
+        font-weight: 900;
         cursor: pointer;
+
+        transition: all .15s ease;
     }
 
+    .eqGhostBtn:hover {
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* CONTENT */
+
     .eqContent {
-        padding: 16px 0 28px;
+        padding: 28px 0 40px;
     }
 
     .eqWrap {
-        width: min(1100px, calc(100% - 24px));
+        width: min(1100px, calc(100% - 32px));
         margin: 0 auto;
-        padding-bottom: 92px;
-        /* espaço pro bottom nav */
     }
+
+    /* FEEDBACK */
 
     .eqMsg {
         border-radius: 16px;
-        padding: 12px 12px;
-        margin-bottom: 12px;
+        padding: 12px;
+        margin-bottom: 16px;
+
         font-weight: 900;
+
         border: 1px solid rgba(255, 255, 255, 0.12);
         background: rgba(255, 255, 255, 0.06);
-        white-space: pre-wrap;
     }
 
     .eqMsg.ok {
@@ -83,99 +99,131 @@
     }
 
     .eqMsg.err {
-        color: rgba(244, 244, 245, 0.88);
+        color: #f4f4f5;
     }
+
+    /* GRID */
 
     .eqGrid {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 14px;
-        align-items: start;
+        gap: 18px;
     }
+
+    /* CARD */
 
     .eqCard {
         border-radius: 18px;
-        background: rgba(31, 31, 31, 0.75);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
-        padding: 14px;
-        margin-bottom: 14px;
+
+        background: rgba(31, 31, 31, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.10);
+
+        padding: 20px;
+
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+        margin-bottom: 24px;
+
     }
 
     .eqCardTitle {
         font-weight: 950;
-        letter-spacing: -0.2px;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
     }
+
+    /* FORM */
 
     .eqForm {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
     }
 
     .eqLabel {
         display: flex;
         flex-direction: column;
         gap: 6px;
-        font-weight: 900;
-        color: rgba(244, 244, 245, 0.8);
+
         font-size: 13px;
+        font-weight: 900;
+
+        color: rgba(244, 244, 245, 0.75);
     }
 
     .eqInput,
     .eqSelect {
+
         border-radius: 14px;
+
         border: 1px solid rgba(255, 255, 255, 0.12);
         background: rgba(255, 255, 255, 0.06);
+
+        padding: 12px;
+
         color: #fff;
-        padding: 12px 12px;
-        outline: none;
+
         font-weight: 900;
     }
 
     .eqInput:focus,
     .eqSelect:focus {
-        border-color: rgba(254, 240, 138, 0.25);
-        box-shadow: 0 0 0 3px rgba(254, 240, 138, 0.1);
+        border-color: rgba(254, 240, 138, 0.28);
+        box-shadow: 0 0 0 3px rgba(254, 240, 138, 0.10);
     }
+
+    /* ROWS */
 
     .eqRow2 {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 10px;
+        gap: 12px;
     }
 
+    /* BUTTON */
+
     .eqBtn {
+
         border-radius: 14px;
+
         border: 1px solid rgba(255, 255, 255, 0.12);
         background: rgba(255, 255, 255, 0.06);
-        color: rgba(244, 244, 245, 0.9);
-        padding: 12px 12px;
+
+        padding: 12px;
+
         font-weight: 950;
+        color: #f4f4f5;
+
         cursor: pointer;
+
+        transition: all .15s ease;
+    }
+
+    .eqBtn:hover {
+        background: rgba(255, 255, 255, 0.12);
     }
 
     .eqBtn.primary {
         background: rgba(254, 240, 138, 0.16);
-        border-color: rgba(254, 240, 138, 0.26);
+        border-color: rgba(254, 240, 138, 0.24);
         color: #fef08a;
     }
 
     .eqBtn:disabled {
-        opacity: 0.6;
+        opacity: .6;
         cursor: not-allowed;
     }
+
+    /* SEARCH */
 
     .eqSearchRow {
         display: flex;
         gap: 10px;
-        align-items: center;
     }
 
     .eqSearchRow .eqInput {
         flex: 1;
     }
+
+    /* LIST */
 
     .eqList {
         display: flex;
@@ -184,18 +232,25 @@
     }
 
     .eqEmpty {
-        color: rgba(244, 244, 245, 0.65);
+        color: rgba(244, 244, 245, 0.6);
         font-weight: 800;
-        padding: 8px 2px;
     }
 
     .eqItem {
-        text-align: left;
         border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+
+        border: 1px solid rgba(255, 255, 255, 0.10);
         background: rgba(255, 255, 255, 0.06);
-        padding: 12px;
+
+        padding: 14px;
+
         cursor: pointer;
+
+        transition: all .15s ease;
+    }
+
+    .eqItem:hover {
+        background: rgba(255, 255, 255, 0.12);
     }
 
     .eqItem.active {
@@ -205,23 +260,29 @@
 
     .eqItemTitle {
         font-weight: 950;
+        color: white;
     }
 
     .eqItemSub {
         margin-top: 6px;
-        color: rgba(244, 244, 245, 0.72);
-        font-weight: 850;
+
+        color: rgba(244, 244, 245, 0.65);
+
         font-size: 13px;
-        line-height: 1.35;
+        font-weight: 800;
     }
 
+    /* DETAILS */
+
     .eqDetails {
+
         border-top: 1px solid rgba(255, 255, 255, 0.08);
+
         padding-top: 12px;
-        margin-top: 6px;
+
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
     }
 
     .eqDetailsTitle {
@@ -231,8 +292,9 @@
     .eqDetailsRow {
         display: flex;
         justify-content: space-between;
-        gap: 10px;
+
         padding: 10px 0;
+
         border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
 
@@ -240,51 +302,38 @@
         border-top: 0;
     }
 
-    .eqBottomNav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 74px;
-        backdrop-filter: blur(12px);
-        background: rgba(10, 10, 12, 0.62);
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
-        display: flex;
-        justify-content: center;
-        gap: 10px;
-        padding: 10px 12px;
-    }
+    /* RESPONSIVE */
 
-    .eqNavItem {
-        width: min(160px, 33%);
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        background: rgba(255, 255, 255, 0.06);
-        color: rgba(244, 244, 245, 0.86);
-        font-weight: 950;
-        cursor: pointer;
-    }
+    @media(min-width:980px) {
 
-    .eqNavItem.active {
-        background: rgba(254, 240, 138, 0.16);
-        border-color: rgba(254, 240, 138, 0.22);
-        color: #fef08a;
-    }
-
-    @media (min-width: 980px) {
         .eqGrid {
             grid-template-columns: 1fr 1fr;
         }
+
     }
 
-    @media (max-width: 560px) {
+    @media(max-width:560px) {
+
         .eqRow2 {
             grid-template-columns: 1fr;
         }
 
         .eqSearchRow {
             flex-direction: column;
-            align-items: stretch;
         }
+
     }
+
+    .eqBrand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .eqLogo {
+        height: 34px;
+        width: auto;
+        object-fit: contain;
+    }
+
 }

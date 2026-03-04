@@ -1,5 +1,9 @@
+// src/pages/PartidaDetalhePage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
+import "../styles/partidaDetalhe.css";
+
 import {
     getPartida,
     confirmarPresenca,
@@ -39,12 +43,7 @@ type PartidaDetalhe = {
     id: number;
     equipeId: number;
     dataHora: string;
-    statusPartida:
-    | "ABERTA"
-    | "LISTA_FECHADA"
-    | "AVALIACAO_LIBERADA"
-    | "ENCERRADA"
-    | string;
+    statusPartida: "ABERTA" | "LISTA_FECHADA" | "AVALIACAO_LIBERADA" | "ENCERRADA" | string;
     politicaInscricao: "SOMENTE_MEMBROS" | "AVULSOS_ABERTOS" | string;
     jogadoresPorTime: number;
     limiteParticipantes: number | null;
@@ -90,9 +89,7 @@ function explainAxiosError(e: any) {
                 ? resData.message
                 : JSON.stringify(resData);
 
-    return status
-        ? `Erro (HTTP ${status}): ${msg}`
-        : "Falha de rede / CORS / backend fora.";
+    return status ? `Erro (HTTP ${status}): ${msg}` : "Falha de rede / CORS / backend fora.";
 }
 
 export default function PartidaDetalhePage() {
@@ -113,6 +110,10 @@ export default function PartidaDetalhePage() {
     const [liberandoAvaliacao, setLiberandoAvaliacao] = useState(false);
     const [encerrandoAvaliacao, setEncerrandoAvaliacao] = useState(false);
 
+    // paginação presenças
+    const PAGE_SIZE = 10;
+    const [page, setPage] = useState(1);
+
     async function load() {
         if (!partidaId) {
             setErr("ID de partida ausente.");
@@ -131,14 +132,14 @@ export default function PartidaDetalhePage() {
             setData(d);
 
             try {
-                const admRes = await api.get<EquipeAdminResumo[]>(
-                    "/eu/equipes-administrador"
-                );
+                const admRes = await api.get<EquipeAdminResumo[]>("/eu/equipes-administrador");
                 const lista = admRes.data ?? [];
                 setSouAdminDaEquipe(lista.some((e) => e.id === d.equipeId));
             } catch {
                 setSouAdminDaEquipe((euRes.data?.id ?? null) === d.criadoPorUsuarioId);
             }
+
+            setPage((p) => Math.max(1, p));
         } catch (e: any) {
             const status = e?.response?.status;
             if (status === 401 || status === 403) {
@@ -173,22 +174,29 @@ export default function PartidaDetalhePage() {
     const estouConfirmado = minhaPresenca?.statusPresenca === "CONFIRMADO";
 
     const limite = data?.limiteParticipantes ?? 0;
-    const vagas = useMemo(
-        () => (limite > 0 ? Math.max(0, limite - confirmados) : null),
-        [limite, confirmados]
-    );
+    const vagas = useMemo(() => (limite > 0 ? Math.max(0, limite - confirmados) : null), [limite, confirmados]);
 
     const partidaAberta = data?.statusPartida === "ABERTA";
     const listaFechada = data?.statusPartida === "LISTA_FECHADA";
     const avaliacaoLiberada = data?.statusPartida === "AVALIACAO_LIBERADA";
 
-    const podeConfirmar =
-        !!data &&
-        partidaAberta &&
-        !estouConfirmado &&
-        (limite === 0 || confirmados < limite);
-
+    const podeConfirmar = !!data && partidaAberta && !estouConfirmado && (limite === 0 || confirmados < limite);
     const podeCancelar = !!data && partidaAberta && estouConfirmado;
+
+    // ===== PAGINAÇÃO PRESENÇAS =====
+    const totalPresencas = presencas.length;
+
+    const totalPages = useMemo(() => Math.max(1, Math.ceil(totalPresencas / PAGE_SIZE)), [totalPresencas]);
+
+    useEffect(() => {
+        if (page > totalPages) setPage(totalPages);
+        if (page < 1) setPage(1);
+    }, [page, totalPages]);
+
+    const pageStart = (page - 1) * PAGE_SIZE;
+    const pageEnd = Math.min(pageStart + PAGE_SIZE, totalPresencas);
+
+    const presencasPaginadas = useMemo(() => presencas.slice(pageStart, pageEnd), [presencas, pageStart, pageEnd]);
 
     async function onConfirmar() {
         if (!partidaId) return;
@@ -275,23 +283,53 @@ export default function PartidaDetalhePage() {
         }
     }
 
-    if (loading) return <div className="ptdLoading">Carregando partida...</div>;
+    if (loading) {
+        return (
+            <div className="ptd2Shell">
+                <div className="ptd2Card ptd2Center">
+                    <div className="ptd2Spinner" />
+                    <div className="ptd2Muted">Carregando partida...</div>
+                </div>
+            </div>
+        );
+    }
 
     if (err) {
         return (
-            <div className="ptdShell">
-                <div className="ptdPanel">
-                    <div className="ptdTopBar">
-                        <button className="ptdIconBtn" onClick={() => nav(-1)} type="button">
+            <div className="ptd2Shell">
+                <div className="ptd2Card">
+                    <div className="ptd2Top">
+                        <button className="ptd2IconBtn" onClick={() => nav(-1)} type="button" aria-label="Voltar">
                             ←
                         </button>
-                        <div className="ptdTopTitle">Detalhes da partida</div>
-                        <div className="ptdTopRight" />
+
+                        <div className="ptd2Brand">
+                            <img className="ptd2Logo" src="/logo-oficial.png" alt="Logo" />
+                            <div className="ptd2TitleWrap">
+                                <div className="ptd2Title">Detalhes da partida</div>
+                                <div className="ptd2Muted">Status, presenças e times</div>
+                            </div>
+                        </div>
+
+                        <div className="ptd2TopRight">
+                            <button className="ptd2BtnSmall ptd2BtnGhost" type="button" onClick={() => nav(`/equipes/${data?.equipeId ?? ""}`)}>
+                                Equipe
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="ptdBody">
-                        <div className="ptdMsg err">{err}</div>
-                        <button className="ptdBtn" type="button" onClick={load}>
+                    <div className="ptd2Alert ptd2AlertErr">
+                        <div>
+                            <div className="ptd2AlertTitle">Erro</div>
+                            <div className="ptd2AlertText">{err}</div>
+                        </div>
+                    </div>
+
+                    <div className="ptd2Footer">
+                        <button className="ptd2Btn ptd2BtnGhost" type="button" onClick={() => nav(-1)}>
+                            Voltar
+                        </button>
+                        <button className="ptd2Btn" type="button" onClick={load}>
                             Tentar novamente
                         </button>
                     </div>
@@ -303,178 +341,266 @@ export default function PartidaDetalhePage() {
     if (!data) return null;
 
     return (
-        <div className="ptdShell">
-            <div className="ptdPanel">
+        <div className="ptd2Shell">
+            <div className="ptd2Card">
                 {/* TOP */}
-                <div className="ptdTopBar">
-                    <button className="ptdIconBtn" onClick={() => nav(-1)} type="button">
+                <div className="ptd2Top">
+                    <button className="ptd2IconBtn" onClick={() => nav(-1)} type="button" aria-label="Voltar">
                         ←
                     </button>
-                    <div className="ptdTopTitle">Detalhes da partida</div>
-                    <button
-                        className="ptdGhostBtn"
-                        type="button"
-                        onClick={() => nav(`/equipes/${data.equipeId}`)}
-                    >
-                        Equipe
-                    </button>
+
+                    <div className="ptd2Brand">
+                        <img className="ptd2Logo" src="/logo-oficial.png" alt="Logo" />
+                        <div className="ptd2TitleWrap">
+                            <div className="ptd2Title">Detalhes da partida</div>
+                            <div className="ptd2Muted">Status, presenças e times</div>
+                        </div>
+                    </div>
+
+                    <div className="ptd2TopRight">
+                        <button className="ptd2IconBtn" type="button" onClick={load} aria-label="Recarregar">
+                            ↻
+                        </button>
+                        <button className="ptd2BtnSmall ptd2BtnGhost" type="button" onClick={() => nav(`/equipes/${data.equipeId}`)}>
+                            Equipe
+                        </button>
+                    </div>
                 </div>
 
+                {/* HERO */}
+                <div className="ptd2Hero">
+                    <div className="ptd2HeroBg" />
+                    <img className="ptd2HeroImg" src="/quadra.png" alt="Quadra" />
+                    <div className="ptd2HeroOverlay" />
+
+                    <div className="ptd2HeroContent">
+                        <div className="ptd2HeroLeft">
+                            <div className="ptd2HeroTitle">{dia}</div>
+                            <div className="ptd2HeroSub">{hora}</div>
+
+                            <div className="ptd2Pills">
+                                <span className="ptd2Pill">{data.statusPartida}</span>
+                                <span className="ptd2Pill ptd2PillSoft">{data.politicaInscricao}</span>
+                                {souAdminDaEquipe ? (
+                                    <span className="ptd2Pill ptd2PillAdmin">Você é admin</span>
+                                ) : (
+                                    <span className="ptd2Pill ptd2PillSoft">Você é membro</span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="ptd2HeroRight">
+                            <div className="ptd2Stat">
+                                <div className="ptd2StatLabel">Partida</div>
+                                <div className="ptd2StatValue">#{data.id}</div>
+                            </div>
+
+                            <div className="ptd2Stat">
+                                <div className="ptd2StatLabel">Confirmados</div>
+                                <div className="ptd2StatValue">{confirmados}</div>
+                            </div>
+
+                            <div className="ptd2Stat">
+                                <div className="ptd2StatLabel">Vagas</div>
+                                <div className="ptd2StatValue">{vagas === null ? "—" : String(vagas)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Alerts */}
                 {(ok || err) && (
-                    <div className={`ptdMsg ${ok ? "ok" : "err"}`}>{ok ?? err}</div>
+                    <div className={`ptd2Alert ${ok ? "ptd2AlertOk" : "ptd2AlertErr"}`}>
+                        <div>
+                            <div className="ptd2AlertTitle">{ok ? "Sucesso" : "Erro"}</div>
+                            <div className="ptd2AlertText">{ok ?? err}</div>
+                        </div>
+                        <button className="ptd2AlertClose" onClick={() => (ok ? setOk(null) : setErr(null))} aria-label="Fechar">
+                            ×
+                        </button>
+                    </div>
                 )}
 
-                {/* COVER */}
-                <div className="ptdCover">
-                    <img src="/quadra.png" alt="Quadra" />
-                    <div className="ptdCoverOverlay" />
-                    <div className="ptdCoverText">
-                        <div className="ptdCoverTitle">{dia}</div>
-                        <div className="ptdCoverSub">
-                            {hora} • {data.statusPartida} • {data.politicaInscricao}
-                        </div>
+                {/* META GRID */}
+                <div className="ptd2InfoGrid">
+                    <div className="ptd2InfoItem">
+                        <div className="ptd2InfoLabel">Jogadores/Time</div>
+                        <div className="ptd2InfoValue">{String(data.jogadoresPorTime)}</div>
+                    </div>
+
+                    <div className="ptd2InfoItem">
+                        <div className="ptd2InfoLabel">Limite</div>
+                        <div className="ptd2InfoValue">{data.limiteParticipantes ? String(data.limiteParticipantes) : "Sem limite"}</div>
+                    </div>
+
+                    <div className="ptd2InfoItem">
+                        <div className="ptd2InfoLabel">Criado em</div>
+                        <div className="ptd2InfoValue">{fmtISO(data.criadoEm)}</div>
+                    </div>
+
+                    <div className="ptd2InfoItem">
+                        <div className="ptd2InfoLabel">Equipe</div>
+                        <div className="ptd2InfoValue">#{String(data.equipeId)}</div>
                     </div>
                 </div>
 
-                {/* HEADER */}
-                <div className="ptdHeader">
-                    <div className="ptdHeaderLeft">
-                        <div className="ptdName">Partida #{data.id}</div>
-                        <div className="ptdMetaLine">
-                            <span className="ptdDot">●</span>
-                            <span>Equipe {data.equipeId}</span>
-                        </div>
+                {/* CTA presença */}
+                <div className="ptd2SectionHead">
+                    <div>
+                        <div className="ptd2SectionTitle">Presenças</div>
+                        <div className="ptd2Muted">Confirme/cancele enquanto estiver ABERTA.</div>
                     </div>
 
-                    <div className="ptdHeaderRight">
-                        <div className="ptdBadgeStatus">{data.statusPartida}</div>
-                        <div className="ptdBadgeSmall">{data.politicaInscricao}</div>
+                    <div className="ptd2SectionRight">
+                        <span className="ptd2CountBadge">
+                            Presença: <b>{minhaPresenca ? minhaPresenca.statusPresenca : "—"}</b>
+                        </span>
                     </div>
                 </div>
 
-                {/* CHIPS */}
-                <div className="ptdChips">
-                    <div className="ptdChip">
-                        <div className="ptdChipLabel">Jogadores/Time</div>
-                        <div className="ptdChipValue">{String(data.jogadoresPorTime)}</div>
-                    </div>
-                    <div className="ptdChip">
-                        <div className="ptdChipLabel">Limite</div>
-                        <div className="ptdChipValue">
-                            {data.limiteParticipantes ? String(data.limiteParticipantes) : "Sem limite"}
-                        </div>
-                    </div>
-                    <div className="ptdChip">
-                        <div className="ptdChipLabel">Criado em</div>
-                        <div className="ptdChipValue">{fmtISO(data.criadoEm)}</div>
-                    </div>
-                    <div className="ptdChip">
-                        <div className="ptdChipLabel">Confirmados</div>
-                        <div className="ptdChipValue">{String(confirmados)}</div>
-                    </div>
-                </div>
-
-                {/* PRESENÇAS */}
-                <div className="ptdSectionTitle">Presenças</div>
-
-                <div className="ptdStatsRow">
-                    <div className="ptdStat">
-                        <div className="ptdStatLabel">Confirmados</div>
-                        <div className="ptdStatValue">{confirmados}</div>
-                    </div>
-
-                    <div className="ptdStat">
-                        <div className="ptdStatLabel">Vagas</div>
-                        <div className="ptdStatValue">{vagas === null ? "—" : String(vagas)}</div>
-                    </div>
-
-                    <div className="ptdStat">
-                        <div className="ptdStatLabel">Minha presença</div>
-                        <div className="ptdStatValue">
-                            {minhaPresenca ? minhaPresenca.statusPresenca : "—"}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="ptdCtaRow">
-                    <button
-                        className="ptdBtn primary"
-                        type="button"
-                        onClick={onConfirmar}
-                        disabled={!podeConfirmar || acting}
-                    >
+                <div className="ptd2CtaRow">
+                    <button className="ptd2Btn primary" type="button" onClick={onConfirmar} disabled={!podeConfirmar || acting}>
                         {acting ? "..." : "Confirmar"}
                     </button>
-                    <button
-                        className="ptdBtn"
-                        type="button"
-                        onClick={onCancelar}
-                        disabled={!podeCancelar || acting}
-                    >
+
+                    <button className="ptd2Btn ptd2BtnGhost" type="button" onClick={onCancelar} disabled={!podeCancelar || acting}>
                         {acting ? "..." : "Cancelar"}
+                    </button>
+
+                    <button className="ptd2Btn ptd2BtnGhost" type="button" onClick={() => nav(`/equipes/${data.equipeId}`)}>
+                        Ver equipe
                     </button>
                 </div>
 
-                <div className="ptdTable">
-                    <div className="ptdTr ptdTh">
-                        <div>STATUS</div>
-                        <div>NOME</div>
-                        <div>ID</div>
-                    </div>
+                {/* PAGER presenças */}
+                {totalPresencas > PAGE_SIZE && (
+                    <div className="ptd2Pager">
+                        <div className="ptd2PagerInfo">
+                            Mostrando <b>{pageStart + 1}</b>–<b>{pageEnd}</b> de <b>{totalPresencas}</b>
+                        </div>
 
-                    {presencas.length === 0 ? (
-                        <div className="ptdEmpty">Sem presenças.</div>
-                    ) : (
-                        presencas.map((p) => (
-                            <div
-                                className={`ptdTr ${p.statusPresenca === "CONFIRMADO" ? "isActive" : ""}`}
-                                key={p.usuarioId}
+                        <div className="ptd2PagerBtns">
+                            <button className="ptd2BtnSmall ptd2BtnGhost" onClick={() => setPage(1)} disabled={page === 1} title="Primeira">
+                                «
+                            </button>
+
+                            <button
+                                className="ptd2BtnSmall ptd2BtnGhost"
+                                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                title="Anterior"
                             >
-                                <div className="ptdTd ptdPos">{p.statusPresenca}</div>
-                                <div className="ptdTd ptdNameCell">{p.nome}</div>
-                                <div className="ptdTd muted">{String(p.usuarioId)}</div>
+                                ←
+                            </button>
+
+                            <div className="ptd2PagerPage">
+                                Página <b>{page}</b> / <b>{totalPages}</b>
                             </div>
-                        ))
+
+                            <button
+                                className="ptd2BtnSmall ptd2BtnGhost"
+                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                title="Próxima"
+                            >
+                                →
+                            </button>
+
+                            <button
+                                className="ptd2BtnSmall ptd2BtnGhost"
+                                onClick={() => setPage(totalPages)}
+                                disabled={page === totalPages}
+                                title="Última"
+                            >
+                                »
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* PRESENÇAS LIST */}
+                <div className="ptd2List">
+                    {totalPresencas === 0 ? (
+                        <div className="ptd2Empty">Sem presenças.</div>
+                    ) : (
+                        presencasPaginadas.map((p) => {
+                            const isMe = meuId === p.usuarioId;
+                            const isOk = p.statusPresenca === "CONFIRMADO";
+
+                            return (
+                                <div key={p.usuarioId} className={`ptd2Row ${isOk ? "isOk" : "isSoft"}`}>
+                                    <div className="ptd2RowMain">
+                                        <div className="ptd2Avatar" aria-hidden="true">
+                                            {String(p.nome || "?").trim().charAt(0).toUpperCase()}
+                                        </div>
+
+                                        <div className="ptd2RowText">
+                                            <div className="ptd2RowName">
+                                                {p.nome}
+                                                {isMe && <span className="ptd2MeTag">você</span>}
+                                            </div>
+
+                                            <div className="ptd2RowMeta">
+                                                <span className={`ptd2Tag ${isOk ? "ptd2TagOk" : "ptd2TagSoft"}`}>{p.statusPresenca}</span>
+                                                <span className="ptd2Tag ptd2TagSoft">ID: {p.usuarioId}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="ptd2RowRight">
+                                        {isOk ? <span className="ptd2DotOk" /> : <span className="ptd2DotSoft" />}
+                                    </div>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
 
-                {/* TIMES */}
+                {/* TIMES / AVALIAÇÃO */}
+                <div className="ptd2SectionHead">
+                    <div>
+                        <div className="ptd2SectionTitle">Times</div>
+                    </div>
+
+                    <div className="ptd2SectionRight">
+                        <span className="ptd2CountBadge">{data.timesGerados ? "Gerados" : "Pendente"}</span>
+                    </div>
+                </div>
+
                 {data.timesGerados ? (
                     <>
-                        <div className="ptdSectionTitle">Times gerados</div>
-
-                        <div className="ptdTimesMeta">
-                            <div className="ptdTimesLine">
+                        <div className="ptd2TimesMeta">
+                            <div className="ptd2TimesLine">
                                 <span>Gerado em</span>
                                 <strong>{fmtISO(data.timesGerados.geradoEm)}</strong>
                             </div>
                         </div>
 
-                        <div className="ptdTimesGrid">
+                        <div className="ptd2TimesGrid">
                             {data.timesGerados.times.map((t) => (
-                                <div className="ptdTeamCard" key={t.numero}>
-                                    <div className="ptdTeamTitle">Time {t.numero}</div>
-                                    <div className="ptdTeamList">
+                                <div className="ptd2TeamCard" key={t.numero}>
+                                    <div className="ptd2TeamTitle">Time {t.numero}</div>
+                                    <div className="ptd2TeamList">
                                         {t.jogadores.map((j) => (
-                                            <div className="ptdTeamRow" key={j.usuarioId}>
-                                                <div className="ptdTeamName">{j.nome}</div>
-                                                <div className="ptdTeamNota">{j.nota}</div>
+                                            <div className="ptd2TeamRow" key={j.usuarioId}>
+                                                <div className="ptd2TeamName">{j.nome}</div>
+                                                <div className="ptd2TeamNota">{j.nota}</div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             ))}
 
-                            <div className="ptdTeamCard">
-                                <div className="ptdTeamTitle">Reservas</div>
-                                <div className="ptdTeamList">
+                            <div className="ptd2TeamCard">
+                                <div className="ptd2TeamTitle">Reservas</div>
+                                <div className="ptd2TeamList">
                                     {data.timesGerados.reservas.length === 0 ? (
-                                        <div className="ptdEmpty">Sem reservas.</div>
+                                        <div className="ptd2Empty">Sem reservas.</div>
                                     ) : (
                                         data.timesGerados.reservas.map((r) => (
-                                            <div className="ptdTeamRow" key={r.usuarioId}>
-                                                <div className="ptdTeamName">{r.nome}</div>
-                                                <div className="ptdTeamNota">{r.nota}</div>
+                                            <div className="ptd2TeamRow" key={r.usuarioId}>
+                                                <div className="ptd2TeamName">{r.nome}</div>
+                                                <div className="ptd2TeamNota">{r.nota}</div>
                                             </div>
                                         ))
                                     )}
@@ -482,41 +608,31 @@ export default function PartidaDetalhePage() {
                             </div>
                         </div>
 
-                        {/* Fluxo 6: admin libera avaliação */}
+                        {/* Lista fechada -> admin libera avaliação */}
                         {souAdminDaEquipe && listaFechada && (
-                            <div className="ptdFooterBox">
-                                <div className="ptdFooterTitle">Avaliação</div>
-                                <div className="ptdFooterText">
-                                    Lista fechada. Libere a avaliação para os jogadores enviarem notas.
-                                </div>
-                                <button
-                                    className="ptdBtn"
-                                    type="button"
-                                    onClick={onLiberarAvaliacao}
-                                    disabled={liberandoAvaliacao}
-                                >
+                            <div className="ptd2FooterBox">
+                                <div className="ptd2FooterTitle">Avaliação</div>
+                                <div className="ptd2FooterText">Lista fechada. Libere a avaliação para os jogadores enviarem notas.</div>
+
+                                <button className="ptd2Btn" type="button" onClick={onLiberarAvaliacao} disabled={liberandoAvaliacao}>
                                     {liberandoAvaliacao ? "..." : "Liberar avaliação"}
                                 </button>
                             </div>
                         )}
 
-                        {/* Fluxo 6: avaliação liberada */}
+                        {/* Avaliação liberada */}
                         {avaliacaoLiberada && (
-                            <div className="ptdFooterBox">
-                                <div className="ptdFooterTitle">Avaliação liberada</div>
-                                <div className="ptdFooterText">Agora os jogadores podem enviar avaliações (batch).</div>
+                            <div className="ptd2FooterBox">
+                                <div className="ptd2FooterTitle">Avaliação liberada</div>
+                                <div className="ptd2FooterText">Agora os jogadores podem enviar avaliações.</div>
 
-                                <button
-                                    className="ptdBtn primary"
-                                    type="button"
-                                    onClick={() => nav(`/partidas/${data.id}/avaliar`)}
-                                >
+                                <button className="ptd2Btn primary" type="button" onClick={() => nav(`/partidas/${data.id}/avaliar`)}>
                                     Avaliar agora
                                 </button>
 
                                 {souAdminDaEquipe && (
                                     <button
-                                        className="ptdBtn"
+                                        className="ptd2Btn ptd2BtnGhost"
                                         type="button"
                                         onClick={onEncerrarAvaliacao}
                                         disabled={encerrandoAvaliacao}
@@ -528,26 +644,29 @@ export default function PartidaDetalhePage() {
                         )}
                     </>
                 ) : (
-                    <div className="ptdFooterBox">
-                        <div className="ptdFooterTitle">Times</div>
-                        <div className="ptdFooterText">Ainda não foram gerados.</div>
+                    <div className="ptd2FooterBox">
+                        <div className="ptd2FooterTitle">Times</div>
+                        <div className="ptd2FooterText">Ainda não foram gerados.</div>
 
                         {souAdminDaEquipe ? (
-                            <button
-                                className="ptdBtn"
-                                type="button"
-                                onClick={onFecharListaEGerarTimes}
-                                disabled={!partidaAberta || generating}
-                            >
+                            <button className="ptd2Btn" type="button" onClick={onFecharListaEGerarTimes} disabled={!partidaAberta || generating}>
                                 {generating ? "..." : "Fechar lista e gerar times"}
                             </button>
                         ) : (
-                            <div className="ptdFooterText muted">
-                                Apenas administradores podem fechar a lista e gerar times.
-                            </div>
+                            <div className="ptd2FooterText ptd2Muted">Apenas administradores podem fechar a lista e gerar times.</div>
                         )}
                     </div>
                 )}
+
+                <div className="ptd2Footer">
+                    <button className="ptd2Btn ptd2BtnGhost" type="button" onClick={() => nav(-1)}>
+                        Voltar
+                    </button>
+
+                    <button className="ptd2Btn" type="button" onClick={() => nav(`/equipes/${data.equipeId}`)}>
+                        Abrir equipe
+                    </button>
+                </div>
             </div>
         </div>
     );
