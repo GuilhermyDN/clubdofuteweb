@@ -1,73 +1,258 @@
-# React + TypeScript + Vite
+# 🏐 Match Teams --- Sistema Inteligente de Organização de Partidas
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Plataforma web para **organização de partidas esportivas**, **geração
+automática de times equilibrados** e **avaliação de desempenho dos
+jogadores** após cada jogo.
 
-Currently, two official plugins are available:
+O sistema foi projetado para resolver um problema comum em esportes
+recreativos:\
+**organizar jogadores, balancear times e melhorar o nível das partidas
+ao longo do tempo.**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+------------------------------------------------------------------------
 
-## React Compiler
+# 🎯 Objetivo do Projeto
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Criar uma plataforma onde jogadores possam:
 
-## Expanding the ESLint configuration
+-   Criar e gerenciar **equipes esportivas**
+-   Organizar **partidas**
+-   Confirmar **presença**
+-   Gerar **times equilibrados automaticamente**
+-   Avaliar **desempenho dos times**
+-   Evoluir o **ranking dos jogadores**
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Tudo isso com uma **interface moderna e simples de usar**.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+------------------------------------------------------------------------
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+# ⚡ Principais Funcionalidades
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 👥 Sistema de Equipes
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Usuários podem criar ou entrar em equipes esportivas.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Cada equipe possui:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+-   Nome
+-   Esporte
+-   Status (Aberta ou Fechada)
+-   Senha opcional
+-   Administradores
+
+Admins podem:
+
+-   Gerenciar membros
+-   Criar partidas
+-   Gerar times
+-   Encerrar avaliações
+
+------------------------------------------------------------------------
+
+## 📅 Criação de Partidas
+
+Uma equipe pode criar partidas com:
+
+-   Data e hora
+-   Política de inscrição
+-   Número de jogadores por time
+-   Limite de participantes
+
+Estados da partida:
+
+ABERTA → LISTA_FECHADA → AVALIACAO_LIBERADA → ENCERRADA
+
+Fluxo:
+
+Criar partida\
+↓\
+Jogadores confirmam presença\
+↓\
+Admin fecha lista\
+↓\
+Sistema gera times\
+↓\
+Avaliação liberada\
+↓\
+Avaliação encerrada
+
+------------------------------------------------------------------------
+
+## ✅ Confirmação de Presença
+
+Jogadores podem:
+
+-   Confirmar presença
+-   Cancelar presença
+
+O sistema controla automaticamente:
+
+-   Número de vagas
+-   Limite de participantes
+
+------------------------------------------------------------------------
+
+## ⚖️ Geração Automática de Times
+
+Quando a lista é fechada:
+
+Admin → Fechar lista e gerar times
+
+O sistema cria times equilibrados baseado em:
+
+-   Nota do jogador
+-   Histórico de desempenho
+-   Distribuição equilibrada
+
+Resultado:
+
+Time 1\
+Time 2\
+Reservas
+
+------------------------------------------------------------------------
+
+## ⭐ Sistema de Avaliação
+
+Após a partida:
+
+Jogadores podem avaliar **os times**.
+
+Escala:
+
+0 → Muito ruim\
+10 → Excelente
+
+Regras:
+
+-   Cada jogador pode enviar **apenas uma avaliação**
+-   Deve avaliar **todos os times**
+-   Avaliação só é possível quando statusPartida = AVALIACAO_LIBERADA
+
+------------------------------------------------------------------------
+
+# 🏗️ Arquitetura
+
+## Frontend
+
+Stack:
+
+React\
+TypeScript\
+React Router\
+Axios\
+CSS custom
+
+Estrutura:
+
+src/ ├ pages\
+│ ├ HomeLogado\
+│ ├ EquipeDetalhePage\
+│ ├ PartidaDetalhePage\
+│ ├ PartidaAvaliacaoTimesPage\
+│ ├ services\
+│ ├ api.ts\
+│ ├ equipe.ts\
+│ ├ partidas.ts\
+│ ├ styles\
+│ └ components
+
+------------------------------------------------------------------------
+
+## Backend (API)
+
+A aplicação consome uma API REST.
+
+Principais endpoints:
+
+### Autenticação
+
+POST /auth/login\
+POST /auth/register\
+GET /eu
+
+### Equipes
+
+POST /equipes\
+GET /equipes/buscar\
+GET /equipes/{id}\
+PATCH /equipes/{id}/senha
+
+### Partidas
+
+POST /partidas\
+GET /partidas/{id}\
+POST /partidas/{id}/confirmar\
+POST /partidas/{id}/cancelar\
+POST /partidas/{id}/fechar-lista\
+POST /partidas/{id}/liberar-avaliacao\
+POST /partidas/{id}/encerrar-avaliacao
+
+### Avaliações
+
+POST /partidas/{id}/avaliacoes-times
+
+Exemplo de payload:
+
+\[ { "tipoAlvo": "TIME", "alvoId": "TIME_1", "nota": 8 }\]
+
+------------------------------------------------------------------------
+
+# 🚀 Como Rodar o Projeto
+
+## 1️⃣ Clonar repositório
+
+git clone https://github.com/GuilhermyDN/clubdofuteweb
+
+## 2️⃣ Instalar dependências
+
+npm install
+
+## 3️⃣ Rodar projeto
+
+npm run dev
+
+------------------------------------------------------------------------
+
+# 📦 Build de Produção
+
+npm run build
+
+------------------------------------------------------------------------
+
+# 📊 Estrutura de Estados da Partida
+
+ABERTA\
+↓\
+LISTA_FECHADA\
+↓\
+AVALIACAO_LIBERADA\
+↓\
+ENCERRADA
+
+------------------------------------------------------------------------
+
+# 📊 Futuras Melhorias
+
+-   Ranking de jogadores
+-   Estatísticas de desempenho
+-   Sistema de temporadas
+-   Histórico de partidas
+-   Algoritmo avançado de balanceamento
+-   Aplicativo mobile
+-   Sistema de notificações
+
+------------------------------------------------------------------------
+
+# 👨‍💻 Autor
+
+Desenvolvido por **Guilhermy Damasceno Novaes**
+
+Projeto focado em organização de partidas esportivas e balanceamento
+automático de times.
+
+------------------------------------------------------------------------
+
+# ⭐ Licença
+
+MIT
