@@ -2,6 +2,26 @@ import { useState } from "react";
 import { cadastrar } from "../services/auth";
 import { useNavigate } from "react-router-dom";
 
+function maskTelefone(v: string) {
+    const nums = v.replace(/\D/g, "").slice(0, 11);
+
+    if (nums.length <= 2) return nums;
+    if (nums.length <= 6) return `(${nums.slice(0, 2)}) ${nums.slice(2)}`;
+    if (nums.length <= 10) {
+        return `(${nums.slice(0, 2)}) ${nums.slice(2, 6)}-${nums.slice(6)}`;
+    }
+
+    return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7)}`;
+}
+
+function maskCEP(v: string) {
+    const nums = v.replace(/\D/g, "").slice(0, 8);
+
+    if (nums.length <= 5) return nums;
+
+    return `${nums.slice(0, 5)}-${nums.slice(5)}`;
+}
+
 export default function Register() {
     const nav = useNavigate();
 
@@ -85,8 +105,11 @@ export default function Register() {
                     <div className="field-caption">Telefone</div>
                     <input
                         className="field"
-                        value={telefone}
-                        onChange={(e) => setTelefone(e.target.value)}
+                        value={maskTelefone(telefone)}
+                        onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, "");
+                            setTelefone(raw);
+                        }}
                     />
                 </div>
 
@@ -95,8 +118,11 @@ export default function Register() {
                     <div className="field-caption">CEP</div>
                     <input
                         className="field"
-                        value={cep}
-                        onChange={(e) => setCep(e.target.value)}
+                        value={maskCEP(cep)}
+                        onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, "");
+                            setCep(raw);
+                        }}
                     />
                 </div>
 

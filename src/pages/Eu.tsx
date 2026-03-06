@@ -54,6 +54,15 @@ function fmtISO(iso?: string) {
     return d.toLocaleString("pt-BR");
 }
 
+function maskAltura(v: string) {
+    const nums = v.replace(/\D/g, "").slice(0, 3);
+
+    if (nums.length <= 1) return nums;
+    if (nums.length === 2) return `${nums[0]}.${nums[1]}`;
+
+    return `${nums[0]}.${nums.slice(1)}`;
+}
+
 export default function EuPage() {
     const nav = useNavigate();
 
@@ -72,6 +81,8 @@ export default function EuPage() {
     const [cep, setCep] = useState("");
     const [peso, setPeso] = useState("");
     const [altura, setAltura] = useState("");
+
+    // notas como string (select value é string)
     const [notaVolei, setNotaVolei] = useState("");
     const [notaFutevolei, setNotaFutevolei] = useState("");
 
@@ -135,6 +146,7 @@ export default function EuPage() {
 
     useEffect(() => {
         load();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const initials = useMemo(() => {
@@ -149,13 +161,24 @@ export default function EuPage() {
     }, [data?.nome]);
 
     const normalized = useMemo(() => {
+        const notaStrToIntOrNull = (s: string) => {
+            const t = (s ?? "").trim();
+            if (!t) return null;
+            const n = Number(t);
+            if (!Number.isFinite(n)) return null;
+            const i = Math.trunc(n);
+            if (i < 0) return 0;
+            if (i > 10) return 10;
+            return i;
+        };
+
         return {
             telefone: normStrToStr(telefone),
             cep: normStrToStr(cep),
             peso: peso.trim() ? toNumOrNull(peso) : null,
             altura: altura.trim() ? toNumOrNull(altura) : null,
-            notaVolei: notaVolei.trim() ? toNumOrNull(notaVolei) : null,
-            notaFutevolei: notaFutevolei.trim() ? toNumOrNull(notaFutevolei) : null,
+            notaVolei: notaStrToIntOrNull(notaVolei),
+            notaFutevolei: notaStrToIntOrNull(notaFutevolei),
         };
     }, [telefone, cep, peso, altura, notaVolei, notaFutevolei]);
 
@@ -189,6 +212,8 @@ export default function EuPage() {
 
         if (o.telefone !== normalized.telefone) patch.telefone = normalized.telefone;
         if (o.cep !== normalized.cep) patch.cep = normalized.cep;
+
+        // mantém seu comportamento atual: null vira 0
         if (o.peso !== normalized.peso) patch.peso = normalized.peso ?? 0;
         if (o.altura !== normalized.altura) patch.altura = normalized.altura ?? 0;
         if (o.notaVolei !== normalized.notaVolei) patch.notaVolei = normalized.notaVolei ?? 0;
@@ -197,8 +222,9 @@ export default function EuPage() {
         try {
             setSaving(true);
             await api.patch("/eu", patch);
-            setOk("Perfil atualizado.");
-            await load();
+
+            // ✅ depois de salvar, redireciona
+            nav("/equipes");
         } catch (e: any) {
             setErr(explainAxiosError(e));
         } finally {
@@ -206,78 +232,45 @@ export default function EuPage() {
         }
     }
 
-    if (loading) return <div className="euLoading">Carregando perfil...</div>;
+    const notaOptions = useMemo(() => Array.from({ length: 11 }, (_, i) => i), []);
 
+    if (loading) return <div className="euLoading">Carregando perfil...</div>;
     if (!data) return null;
 
     return (
         <div className="euShell">
             <div className="euPanel">
-
                 {/* NAVBAR SUPERIOR */}
-
                 <div className="euTopBar">
                     <div className="euBrand">
-                        <img
-                            src="/logo-oficial.png"
-                            alt="logo"
-                            className="euLogo"
-                        />
-
-                        <span className="euTopTitle">
-                            Perfil
-                        </span>
+                        <img src="/logo-oficial.png" alt="logo" className="euLogo" />
+                        <span className="euTopTitle">Perfil</span>
                     </div>
 
                     <div className="euNavGroup">
-                        <button
-                            className="euNavLink"
-                            onClick={() => nav("/equipes")}
-                        >
+                        <button className="euNavLink" onClick={() => nav("/equipes")}>
                             Equipes
                         </button>
-
-                        <button
-                            className="euNavLink active"
-                        >
-                            Perfil
-                        </button>
+                        <button className="euNavLink active">Perfil</button>
                     </div>
                 </div>
 
                 {/* HEADER PERFIL */}
-
                 <div className="euHeader">
                     <div className="euAvatarWrap">
-                        <div className="euAvatarFallback">
-                            {initials}
-                        </div>
+                        <div className="euAvatarFallback">{initials}</div>
                     </div>
 
-                    <div className="euName">
-                        {data.nome}
-                    </div>
-
-                    <div className="euSub">
-                        {data.telefone}
-                    </div>
+                    <div className="euName">{data.nome}</div>
+                    <div className="euSub">{data.telefone}</div>
                 </div>
 
-                {(ok || err) && (
-                    <div className={`euMsg ${ok ? "ok" : "err"}`}>
-                        {ok ?? err}
-                    </div>
-                )}
+                {(ok || err) && <div className={`euMsg ${ok ? "ok" : "err"}`}>{ok ?? err}</div>}
 
                 <div className="euBody">
-
                     {/* CONTA */}
-
                     <section className="euCard">
-
-                        <div className="euCardTitle">
-                            Conta
-                        </div>
+                        <div className="euCardTitle">Conta</div>
 
                         <div className="euRow">
                             <span>ID</span>
@@ -288,183 +281,121 @@ export default function EuPage() {
                             <span>Criado em</span>
                             <strong>{fmtISO(data.criadoEm)}</strong>
                         </div>
-
                     </section>
 
                     {/* PERFIL */}
-
                     <section className="euCard">
-
-                        <div className="euCardTitle">
-                            Dados do perfil
-                        </div>
+                        <div className="euCardTitle">Dados do perfil</div>
 
                         <div className="euFormGrid">
-
                             <label className="euLabel">
                                 Telefone
-                                <input
-                                    className="euInput"
-                                    value={telefone}
-                                    onChange={(e) => setTelefone(e.target.value)}
-                                />
+                                <input className="euInput" value={telefone} onChange={(e) => setTelefone(e.target.value)} />
                             </label>
 
                             <label className="euLabel">
                                 CEP
-                                <input
-                                    className="euInput"
-                                    value={cep}
-                                    onChange={(e) => setCep(e.target.value)}
-                                />
+                                <input className="euInput" value={cep} onChange={(e) => setCep(e.target.value)} />
                             </label>
 
                             <label className="euLabel">
                                 Peso
-                                <input
-                                    className="euInput"
-                                    value={peso}
-                                    onChange={(e) => setPeso(e.target.value)}
-                                />
+                                <input className="euInput" value={peso} onChange={(e) => setPeso(e.target.value)} />
                             </label>
 
                             <label className="euLabel">
                                 Altura
-                                <input
-                                    className="euInput"
-                                    value={altura}
-                                    onChange={(e) => setAltura(e.target.value)}
-                                />
+                                <input className="euInput" value={maskAltura(altura)} onChange={(e) => {const raw = e.target.value.replace(/\D/g, "").slice(0, 3); setAltura(raw);}} />
                             </label>
 
+                            {/* ✅ SELECT 0..10 */}
                             <label className="euLabel">
                                 Nota Vôlei
-                                <input
+                                <select
                                     className="euInput"
                                     value={notaVolei}
                                     onChange={(e) => setNotaVolei(e.target.value)}
-                                />
+                                >
+                                    <option value="">—</option>
+                                    {notaOptions.map((n) => (
+                                        <option key={n} value={String(n)}>
+                                            {n}
+                                        </option>
+                                    ))}
+                                </select>
                             </label>
 
+                            {/* ✅ SELECT 0..10 */}
                             <label className="euLabel">
                                 Nota Futevôlei
-                                <input
+                                <select
                                     className="euInput"
                                     value={notaFutevolei}
                                     onChange={(e) => setNotaFutevolei(e.target.value)}
-                                />
+                                >
+                                    <option value="">—</option>
+                                    {notaOptions.map((n) => (
+                                        <option key={n} value={String(n)}>
+                                            {n}
+                                        </option>
+                                    ))}
+                                </select>
                             </label>
-
                         </div>
 
-                        <button
-                            className="euBtn primary"
-                            onClick={onSalvar}
-                            disabled={!hasChanges || saving}
-                        >
+                        <button className="euBtn primary" onClick={onSalvar} disabled={!hasChanges || saving}>
                             {saving ? "Salvando..." : "Salvar alterações"}
                         </button>
-
                     </section>
 
                     {/* ADMIN */}
-
                     <section className="euCard">
-
-                        <div className="euCardTitle">
-                            Sou administrador
-                        </div>
+                        <div className="euCardTitle">Sou administrador</div>
 
                         {equipesAdmin.length === 0 ? (
-                            <div className="euEmpty">
-                                Você não administra equipes.
-                            </div>
+                            <div className="euEmpty">Você não administra equipes.</div>
                         ) : (
                             <div className="euTeamList">
-
                                 {equipesAdmin.map((t) => (
-
-                                    <button
-                                        key={t.id}
-                                        className="euTeamItem"
-                                        onClick={() => nav(`/equipes/${t.id}`)}
-                                    >
-
+                                    <button key={t.id} className="euTeamItem" onClick={() => nav(`/equipes/${t.id}`)}>
                                         <div className="euTeamLeft">
-
-                                            <div className="euTeamName">
-                                                {t.nome}
-                                            </div>
-
+                                            <div className="euTeamName">{t.nome}</div>
                                             <div className="euTeamMeta">
                                                 {t.esporte} • {t.statusEquipe} • {t.totalMembros} membros
                                             </div>
-
                                         </div>
 
-                                        <div className="euTeamBadge admin">
-                                            ADMIN
-                                        </div>
-
+                                        <div className="euTeamBadge admin">ADMIN</div>
                                     </button>
-
                                 ))}
-
                             </div>
                         )}
-
                     </section>
 
                     {/* MEMBRO */}
-
                     <section className="euCard">
-
-                        <div className="euCardTitle">
-                            Minhas equipes
-                        </div>
+                        <div className="euCardTitle">Minhas equipes</div>
 
                         {equipesMembro.length === 0 ? (
-                            <div className="euEmpty">
-                                Você não participa de equipes.
-                            </div>
+                            <div className="euEmpty">Você não participa de equipes.</div>
                         ) : (
                             <div className="euTeamList">
-
                                 {equipesMembro.map((t) => (
-
-                                    <button
-                                        key={t.id}
-                                        className="euTeamItem"
-                                        onClick={() => nav(`/equipes/${t.id}`)}
-                                    >
-
+                                    <button key={t.id} className="euTeamItem" onClick={() => nav(`/equipes/${t.id}`)}>
                                         <div className="euTeamLeft">
-
-                                            <div className="euTeamName">
-                                                {t.nome}
-                                            </div>
-
+                                            <div className="euTeamName">{t.nome}</div>
                                             <div className="euTeamMeta">
                                                 {t.esporte} • {t.statusEquipe} • {t.totalMembros} membros
                                             </div>
-
                                         </div>
 
-                                        <div className="euTeamBadge">
-                                            VER
-                                        </div>
-
+                                        <div className="euTeamBadge">VER</div>
                                     </button>
-
                                 ))}
-
                             </div>
                         )}
-
                     </section>
-
                 </div>
-
             </div>
         </div>
     );

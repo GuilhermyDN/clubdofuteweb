@@ -248,7 +248,7 @@ export default function EquipeDetalhePage() {
                 {/* HERO */}
                 <div className="ed2Hero">
                     <div className="ed2HeroBg" />
-                    <img className="ed2HeroImg" src="/quadra.png" alt="Quadra" />
+                    <img className="ed2HeroImg" src="/quadra-areia.jpg" alt="Quadra" />
                     <div className="ed2HeroOverlay" />
 
                     <div className="ed2HeroContent">

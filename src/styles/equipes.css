@@ -122,7 +122,6 @@
 
         box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
         margin-bottom: 24px;
-
     }
 
     .eqCardTitle {
@@ -151,7 +150,6 @@
 
     .eqInput,
     .eqSelect {
-
         border-radius: 14px;
 
         border: 1px solid rgba(255, 255, 255, 0.12);
@@ -166,22 +164,55 @@
 
     .eqInput:focus,
     .eqSelect:focus {
+        outline: none;
         border-color: rgba(254, 240, 138, 0.28);
         box-shadow: 0 0 0 3px rgba(254, 240, 138, 0.10);
     }
 
     /* ROWS */
-
     .eqRow2 {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
     }
 
+    /* ✅ SELECT: wrapper + seta real */
+    .eqSelectWrap {
+        position: relative;
+    }
+
+    .eqSelect {
+        width: 100%;
+        padding-right: 44px;
+
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+
+        cursor: pointer;
+    }
+
+    .eqSelect option {
+        background: #0f1623;
+        color: #fff;
+    }
+
+    .eqSelectArrow {
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        width: 10px;
+        height: 10px;
+        transform: translateY(-50%) rotate(45deg);
+        border-right: 2px solid rgba(255, 255, 255, 0.75);
+        border-bottom: 2px solid rgba(255, 255, 255, 0.75);
+        pointer-events: none;
+        opacity: 0.9;
+    }
+
     /* BUTTON */
 
     .eqBtn {
-
         border-radius: 14px;
 
         border: 1px solid rgba(255, 255, 255, 0.12);
@@ -275,9 +306,7 @@
     /* DETAILS */
 
     .eqDetails {
-
         border-top: 1px solid rgba(255, 255, 255, 0.08);
-
         padding-top: 12px;
 
         display: flex;
@@ -302,18 +331,90 @@
         border-top: 0;
     }
 
+    /* ✅ AGENDA */
+    .eqAgenda {
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        background: rgba(255, 255, 255, 0.04);
+        padding: 14px;
+    }
+
+    .eqAgendaTitle {
+        font-weight: 950;
+        color: rgba(244, 244, 245, 0.92);
+        margin-bottom: 4px;
+    }
+
+    .eqAgendaHint {
+        font-size: 12px;
+        font-weight: 800;
+        color: rgba(244, 244, 245, 0.60);
+        margin-bottom: 10px;
+    }
+
+    .eqAgendaGrid {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .eqAgendaRow {
+        display: grid;
+        grid-template-columns: 1fr 120px;
+        align-items: center;
+        gap: 10px;
+
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.10);
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .eqAgendaRow.on {
+        border-color: rgba(254, 240, 138, 0.22);
+        background: rgba(254, 240, 138, 0.08);
+    }
+
+    .eqAgendaDay {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+
+        font-weight: 900;
+        color: rgba(244, 244, 245, 0.82);
+        user-select: none;
+    }
+
+    .eqAgendaDay input {
+        width: 18px;
+        height: 18px;
+        accent-color: rgba(254, 240, 138, 0.95);
+    }
+
+    .eqAgendaTime {
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(20, 25, 35, 0.65);
+        color: rgba(255, 255, 255, 0.92);
+        padding: 10px 10px;
+        font-weight: 950;
+    }
+
+    .eqAgendaTime:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
     /* RESPONSIVE */
 
     @media(min-width:980px) {
-
         .eqGrid {
             grid-template-columns: 1fr 1fr;
         }
-
     }
 
     @media(max-width:560px) {
-
         .eqRow2 {
             grid-template-columns: 1fr;
         }
@@ -322,6 +423,9 @@
             flex-direction: column;
         }
 
+        .eqAgendaRow {
+            grid-template-columns: 1fr 110px;
+        }
     }
 
     .eqBrand {
@@ -335,5 +439,4 @@
         width: auto;
         object-fit: contain;
     }
-
 }

@@ -28,6 +28,37 @@ function explainAxiosError(e: any) {
     return "Falha de rede / backend indisponível.";
 }
 
+function maskCepOuLocal(v: string) {
+    const onlyNums = v.replace(/\D/g, "");
+
+    if (/^\d*$/.test(v)) {
+        const nums = onlyNums.slice(0, 8);
+        if (nums.length <= 5) return nums;
+        return `${nums.slice(0, 5)}-${nums.slice(5)}`;
+    }
+
+    return v;
+}
+
+type DiaKey =
+    | "segunda"
+    | "terca"
+    | "quarta"
+    | "quinta"
+    | "sexta"
+    | "sabado"
+    | "domingo";
+
+const DIAS: { key: DiaKey; label: string }[] = [
+    { key: "segunda", label: "segunda" },
+    { key: "terca", label: "terça" },
+    { key: "quarta", label: "quarta" },
+    { key: "quinta", label: "quinta" },
+    { key: "sexta", label: "sexta" },
+    { key: "sabado", label: "sábado" },
+    { key: "domingo", label: "domingo" },
+];
+
 export default function EquipesPage() {
     const nav = useNavigate();
 
@@ -55,6 +86,7 @@ export default function EquipesPage() {
 
     useEffect(() => {
         loadMinhasEquipes();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // ===== FEEDBACK =====
@@ -68,16 +100,33 @@ export default function EquipesPage() {
         esporte: "VOLEI",
         statusEquipe: "ABERTA",
         senhaEquipe: "",
-        diasHorariosPadrao: "",
+        diasHorariosPadrao: "", // vai ser preenchido pela agenda
     });
+
+    // ✅ AGENDA (dias + time picker)
+    const [agenda, setAgenda] = useState<Record<DiaKey, { enabled: boolean; time: string }>>({
+        segunda: { enabled: false, time: "19:00" },
+        terca: { enabled: false, time: "19:00" },
+        quarta: { enabled: false, time: "19:00" },
+        quinta: { enabled: false, time: "19:00" },
+        sexta: { enabled: false, time: "19:00" },
+        sabado: { enabled: false, time: "09:00" },
+        domingo: { enabled: false, time: "09:00" },
+    });
+
+    const diasHorariosPadraoStr = useMemo(() => {
+        const parts: string[] = [];
+        for (const d of DIAS) {
+            const item = agenda[d.key];
+            if (item?.enabled) parts.push(`${d.key}-${item.time}`);
+        }
+        return parts.join(",");
+    }, [agenda]);
 
     const [creating, setCreating] = useState(false);
     const showSenha = create.statusEquipe === "FECHADA";
 
-    function setCreateField<K extends keyof CriarEquipeBody>(
-        k: K,
-        v: CriarEquipeBody[K]
-    ) {
+    function setCreateField<K extends keyof CriarEquipeBody>(k: K, v: CriarEquipeBody[K]) {
         setCreate((p) => ({ ...p, [k]: v }));
     }
 
@@ -90,13 +139,15 @@ export default function EquipesPage() {
             cepOuLocal: normalizeStr(create.cepOuLocal),
             esporte: create.esporte,
             statusEquipe: create.statusEquipe,
-            diasHorariosPadrao: normalizeStr(create.diasHorariosPadrao),
+
+            // ✅ agora vem da agenda
+            diasHorariosPadrao: diasHorariosPadraoStr,
         };
 
         if (!payload.nome) return setErr("Nome da equipe é obrigatório.");
         if (!payload.cepOuLocal) return setErr("Local é obrigatório.");
         if (!payload.diasHorariosPadrao)
-            return setErr("Dias/Horários padrão são obrigatórios.");
+            return setErr("Agenda padrão é obrigatória (habilite ao menos 1 dia).");
 
         if (payload.statusEquipe === "FECHADA") {
             const s = normalizeStr(create.senhaEquipe ?? "");
@@ -120,6 +171,8 @@ export default function EquipesPage() {
     // ===== BUSCAR =====
     const [q, setQ] = useState("");
     const [searching, setSearching] = useState(false);
+    const [searchedOnce, setSearchedOnce] = useState(false);
+
     const [results, setResults] = useState<EquipeResumo[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [detalhe, setDetalhe] = useState<EquipeDetalhe | null>(null);
@@ -132,23 +185,31 @@ export default function EquipesPage() {
         setOk(null);
 
         const qq = normalizeStr(q);
-        if (!qq) {
-            setResults([]);
-            setSelectedId(null);
-            setDetalhe(null);
-            return;
-        }
 
         try {
             setSearching(true);
+            setSearchedOnce(true);
+
+            // ✅ busca mesmo vazio (se backend aceitar, lista tudo ao abrir)
             const list = await buscarEquipes(qq);
             setResults(list ?? []);
+
+            if (!list?.length) {
+                setSelectedId(null);
+                setDetalhe(null);
+            }
         } catch (e: any) {
             setErr(explainAxiosError(e));
         } finally {
             setSearching(false);
         }
     }
+
+    // ✅ buscar ao carregar
+    useEffect(() => {
+        handleBuscar();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     async function openDetalhe(id: string) {
         setErr(null);
@@ -208,19 +269,13 @@ export default function EquipesPage() {
 
     return (
         <main className="eqPage">
-
             {/* NAVBAR SUPERIOR */}
             <header className="eqTop">
                 <div className="eqTopInner">
                     <div className="eqTitleRow">
-
                         <div>
                             <div className="eqBrand">
-                                <img
-                                    src="/logo-oficial.png"
-                                    alt="logo"
-                                    className="eqLogo"
-                                />
+                                <img src="/logo-oficial.png" alt="logo" className="eqLogo" />
                                 <span className="eqTitle">Equipes</span>
                             </div>
                             <div className="eqSub">
@@ -230,13 +285,13 @@ export default function EquipesPage() {
 
                         <div className="eqTopRight">
                             <button
+                                type="button"
                                 className="eqGhostBtn"
                                 onClick={() => nav("/eu")}
                             >
                                 Perfil
                             </button>
                         </div>
-
                     </div>
                 </div>
             </header>
@@ -244,15 +299,13 @@ export default function EquipesPage() {
             {/* CONTEÚDO */}
             <section className="eqContent">
                 <div className="eqWrap">
-
-                    {bootLoading && (
-                        <div className="eqMsg">Carregando suas equipes...</div>
-                    )}
+                    {bootLoading && <div className="eqMsg">Carregando suas equipes...</div>}
 
                     {bootErr && (
                         <div className="eqMsg err">
                             {bootErr}
                             <button
+                                type="button"
                                 className="eqBtn"
                                 onClick={loadMinhasEquipes}
                                 style={{ marginTop: 10 }}
@@ -262,21 +315,17 @@ export default function EquipesPage() {
                         </div>
                     )}
 
-                    {(ok || err) && (
-                        <div className={`eqMsg ${ok ? "ok" : "err"}`}>
-                            {ok ?? err}
-                        </div>
-                    )}
+                    {(ok || err) && <div className={`eqMsg ${ok ? "ok" : "err"}`}>{ok ?? err}</div>}
 
                     {/* MINHAS EQUIPES */}
                     {temEquipe && (
                         <section className="eqCard">
-                            
                             <div className="eqCardTitle">Minhas equipes</div>
 
                             <div className="eqList">
                                 {minhasEquipes.map((r) => (
                                     <button
+                                        type="button"
                                         key={r.id}
                                         className="eqItem"
                                         onClick={() => nav(`/equipes/${r.id}`)}
@@ -293,14 +342,11 @@ export default function EquipesPage() {
 
                     {/* GRID */}
                     <div className="eqGrid">
-
                         {/* CRIAR */}
                         <section className="eqCard">
-
                             <div className="eqCardTitle">Criar equipe</div>
 
                             <div className="eqForm">
-
                                 <label className="eqLabel">
                                     <span>Nome</span>
                                     <input
@@ -314,44 +360,56 @@ export default function EquipesPage() {
                                     <span>Local</span>
                                     <input
                                         className="eqInput"
-                                        value={create.cepOuLocal}
-                                        onChange={(e) => setCreateField("cepOuLocal", e.target.value)}
+                                        value={maskCepOuLocal(create.cepOuLocal)}
+                                        onChange={(e) => {
+                                            const v = e.target.value;
+
+                                            if (/^\d*$/.test(v)) {
+                                                setCreateField("cepOuLocal", v.replace(/\D/g, "").slice(0, 8));
+                                            } else {
+                                                setCreateField("cepOuLocal", v);
+                                            }
+                                        }}
                                     />
                                 </label>
 
                                 <div className="eqRow2">
-
                                     <label className="eqLabel">
                                         <span>Esporte</span>
-                                        <select
-                                            className="eqSelect"
-                                            value={create.esporte}
-                                            onChange={(e) =>
-                                                setCreateField("esporte", e.target.value as Esporte)
-                                            }
-                                        >
-                                            <option value="VOLEI">VOLEI</option>
-                                            <option value="FUTEVOLEI">FUTEVOLEI</option>
-                                        </select>
+                                        <div className="eqSelectWrap">
+                                            <select
+                                                className="eqSelect"
+                                                value={create.esporte}
+                                                onChange={(e) =>
+                                                    setCreateField("esporte", e.target.value as Esporte)
+                                                }
+                                            >
+                                                <option value="VOLEI">VOLEI</option>
+                                                <option value="FUTEVOLEI">FUTEVOLEI</option>
+                                            </select>
+                                            <span className="eqSelectArrow" aria-hidden="true" />
+                                        </div>
                                     </label>
 
                                     <label className="eqLabel">
                                         <span>Status</span>
-                                        <select
-                                            className="eqSelect"
-                                            value={create.statusEquipe}
-                                            onChange={(e) =>
-                                                setCreateField(
-                                                    "statusEquipe",
-                                                    e.target.value as StatusEquipe
-                                                )
-                                            }
-                                        >
-                                            <option value="ABERTA">ABERTA</option>
-                                            <option value="FECHADA">FECHADA</option>
-                                        </select>
+                                        <div className="eqSelectWrap">
+                                            <select
+                                                className="eqSelect"
+                                                value={create.statusEquipe}
+                                                onChange={(e) =>
+                                                    setCreateField(
+                                                        "statusEquipe",
+                                                        e.target.value as StatusEquipe
+                                                    )
+                                                }
+                                            >
+                                                <option value="ABERTA">ABERTA</option>
+                                                <option value="FECHADA">FECHADA</option>
+                                            </select>
+                                            <span className="eqSelectArrow" aria-hidden="true" />
+                                        </div>
                                     </label>
-
                                 </div>
 
                                 {showSenha && (
@@ -360,53 +418,88 @@ export default function EquipesPage() {
                                         <input
                                             className="eqInput"
                                             value={create.senhaEquipe ?? ""}
-                                            onChange={(e) =>
-                                                setCreateField("senhaEquipe", e.target.value)
-                                            }
+                                            onChange={(e) => setCreateField("senhaEquipe", e.target.value)}
                                         />
                                     </label>
                                 )}
 
-                                <label className="eqLabel">
-                                    <span>Dias / Horários</span>
-                                    <input
-                                        className="eqInput"
-                                        placeholder="Ex.: Sábados às 9h"
-                                        value={create.diasHorariosPadrao}
-                                        onChange={(e) =>
-                                            setCreateField("diasHorariosPadrao", e.target.value)
-                                        }
-                                    />
-                                </label>
+                                {/* ✅ AGENDA: dias + time picker (só habilita quando marcar) */}
+                                <div className="eqAgenda">
+                                    <div className="eqAgendaTitle">Agenda padrão</div>
+                                    <div className="eqAgendaHint">Marque os dias e escolha o horário.</div>
+
+                                    <div className="eqAgendaGrid">
+                                        {DIAS.map((d) => {
+                                            const item = agenda[d.key];
+
+                                            return (
+                                                <div
+                                                    key={d.key}
+                                                    className={`eqAgendaRow ${item.enabled ? "on" : ""}`}
+                                                >
+                                                    <label className="eqAgendaDay">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={item.enabled}
+                                                            onChange={(e) => {
+                                                                const enabled = e.target.checked;
+                                                                setAgenda((prev) => ({
+                                                                    ...prev,
+                                                                    [d.key]: { ...prev[d.key], enabled },
+                                                                }));
+                                                            }}
+                                                        />
+                                                        <span>{d.label}</span>
+                                                    </label>
+
+                                                    <input
+                                                        type="time"
+                                                        className="eqAgendaTime"
+                                                        value={item.time}
+                                                        disabled={!item.enabled}
+                                                        onChange={(e) => {
+                                                            const time = e.target.value;
+                                                            setAgenda((prev) => ({
+                                                                ...prev,
+                                                                [d.key]: { ...prev[d.key], time },
+                                                            }));
+                                                        }}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
 
                                 <button
+                                    type="button"
                                     className="eqBtn primary"
                                     onClick={handleCriarEquipe}
                                     disabled={creating}
                                 >
                                     {creating ? "Criando..." : "Criar equipe"}
                                 </button>
-
                             </div>
-
                         </section>
 
                         {/* BUSCAR */}
                         <section className="eqCard">
-
                             <div className="eqCardTitle">Buscar equipe</div>
 
                             <div className="eqForm">
-
                                 <div className="eqSearchRow">
                                     <input
                                         className="eqInput"
                                         placeholder="Nome da equipe..."
                                         value={q}
                                         onChange={(e) => setQ(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") handleBuscar();
+                                        }}
                                     />
 
                                     <button
+                                        type="button"
                                         className="eqBtn"
                                         onClick={handleBuscar}
                                         disabled={searching}
@@ -418,11 +511,16 @@ export default function EquipesPage() {
                                 <div className="eqList">
                                     {results.length === 0 ? (
                                         <div className="eqEmpty">
-                                            Nenhum resultado.
+                                            {searchedOnce
+                                                ? (q.trim()
+                                                    ? "Equipe não encontrada."
+                                                    : "Nenhuma equipe disponível no momento.")
+                                                : "Carregando..."}
                                         </div>
                                     ) : (
                                         results.map((r) => (
                                             <button
+                                                type="button"
                                                 key={r.id}
                                                 className={`eqItem ${String(selectedId) === String(r.id) ? "active" : ""
                                                     }`}
@@ -439,7 +537,6 @@ export default function EquipesPage() {
 
                                 {selectedId && (
                                     <div className="eqDetails">
-
                                         <div className="eqDetailsTitle">Detalhes</div>
 
                                         <div className="eqDetailsRow">
@@ -448,6 +545,7 @@ export default function EquipesPage() {
                                         </div>
 
                                         <button
+                                            type="button"
                                             className="eqBtn"
                                             onClick={() => nav(`/equipes/${selectedId}`)}
                                         >
@@ -466,24 +564,20 @@ export default function EquipesPage() {
                                         )}
 
                                         <button
+                                            type="button"
                                             className="eqBtn primary"
                                             onClick={handleEntrar}
                                             disabled={joining}
                                         >
                                             {joining ? "Entrando..." : "Entrar"}
                                         </button>
-
                                     </div>
                                 )}
-
                             </div>
-
                         </section>
-
                     </div>
                 </div>
             </section>
-
         </main>
     );
 }

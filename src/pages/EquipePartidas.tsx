@@ -245,7 +245,7 @@ export default function EquipePartidasPage() {
                 {/* HERO */}
                 <div className="pd2Hero">
                     <div className="pd2HeroBg" />
-                    <img className="pd2HeroImg" src="/quadra.png" alt="Quadra" />
+                    <img className="pd2HeroImg" src="/quadra-areia.jpg" alt="Quadra" />
                     <div className="pd2HeroOverlay" />
 
                     <div className="pd2HeroContent">
@@ -380,7 +380,6 @@ export default function EquipePartidasPage() {
                                     }}
                                     placeholder="vazio = sem limite"
                                 />
-                                <div className="pd2FieldHelp">Se vazio, o backend não limita.</div>
                             </div>
                         </div>
 

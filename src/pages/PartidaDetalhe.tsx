@@ -56,20 +56,31 @@ type PartidaDetalhe = {
 type EuResponse = { id: number; nome?: string };
 type EquipeAdminResumo = { id: number };
 
-function fmtDataHora(iso?: string) {
-    if (!iso) return { dia: "—", hora: "—" };
+function cap(s: string) {
+    if (!s) return s;
+    return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function fmtDataHoraParts(iso?: string) {
+    if (!iso) return { weekday: "—", date: "—", time: "—" };
+
     const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return { dia: "—", hora: "—" };
-    const dia = d.toLocaleDateString("pt-BR", {
-        weekday: "long",
+    if (Number.isNaN(d.getTime())) return { weekday: "—", date: "—", time: "—" };
+
+    const weekday = cap(d.toLocaleDateString("pt-BR", { weekday: "long" }));
+
+    const date = d.toLocaleDateString("pt-BR", {
         day: "2-digit",
-        month: "2-digit",
+        month: "long",
+        year: "numeric",
     });
-    const hora = d.toLocaleTimeString("pt-BR", {
+
+    const time = d.toLocaleTimeString("pt-BR", {
         hour: "2-digit",
         minute: "2-digit",
     });
-    return { dia, hora };
+
+    return { weekday, date, time };
 }
 
 function fmtISO(iso?: string) {
@@ -157,7 +168,7 @@ export default function PartidaDetalhePage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [partidaId]);
 
-    const { dia, hora } = useMemo(() => fmtDataHora(data?.dataHora), [data?.dataHora]);
+    const when = useMemo(() => fmtDataHoraParts(data?.dataHora), [data?.dataHora]);
 
     const presencas = useMemo(() => data?.presencas ?? [], [data?.presencas]);
 
@@ -312,7 +323,11 @@ export default function PartidaDetalhePage() {
                         </div>
 
                         <div className="ptd2TopRight">
-                            <button className="ptd2BtnSmall ptd2BtnGhost" type="button" onClick={() => nav(`/equipes/${data?.equipeId ?? ""}`)}>
+                            <button
+                                className="ptd2BtnSmall ptd2BtnGhost"
+                                type="button"
+                                onClick={() => nav(`/equipes/${data?.equipeId ?? ""}`)}
+                            >
                                 Equipe
                             </button>
                         </div>
@@ -370,13 +385,25 @@ export default function PartidaDetalhePage() {
                 {/* HERO */}
                 <div className="ptd2Hero">
                     <div className="ptd2HeroBg" />
-                    <img className="ptd2HeroImg" src="/quadra.png" alt="Quadra" />
+                    <img className="ptd2HeroImg" src="/quadra-areia.jpg" alt="Quadra" />
                     <div className="ptd2HeroOverlay" />
 
                     <div className="ptd2HeroContent">
                         <div className="ptd2HeroLeft">
-                            <div className="ptd2HeroTitle">{dia}</div>
-                            <div className="ptd2HeroSub">{hora}</div>
+                            {/* NOVO BLOCO DE DATA/HORA */}
+                            <div className="ptd2When">
+                                <div className="ptd2WhenTop">
+                                    <span className="ptd2WhenDot" aria-hidden="true" />
+                                    <span className="ptd2WhenWeekday">{when.weekday}</span>
+                                </div>
+
+                                <div className="ptd2WhenDate">{when.date}</div>
+
+                                <div className="ptd2WhenBottom">
+                                    <span className="ptd2WhenPill">⏰ {when.time}</span>
+                                    <span className="ptd2WhenPill soft">Partida #{data.id}</span>
+                                </div>
+                            </div>
 
                             <div className="ptd2Pills">
                                 <span className="ptd2Pill">{data.statusPartida}</span>
@@ -547,9 +574,7 @@ export default function PartidaDetalhePage() {
                                         </div>
                                     </div>
 
-                                    <div className="ptd2RowRight">
-                                        {isOk ? <span className="ptd2DotOk" /> : <span className="ptd2DotSoft" />}
-                                    </div>
+                                    <div className="ptd2RowRight">{isOk ? <span className="ptd2DotOk" /> : <span className="ptd2DotSoft" />}</div>
                                 </div>
                             );
                         })
@@ -631,12 +656,7 @@ export default function PartidaDetalhePage() {
                                 </button>
 
                                 {souAdminDaEquipe && (
-                                    <button
-                                        className="ptd2Btn ptd2BtnGhost"
-                                        type="button"
-                                        onClick={onEncerrarAvaliacao}
-                                        disabled={encerrandoAvaliacao}
-                                    >
+                                    <button className="ptd2Btn ptd2BtnGhost" type="button" onClick={onEncerrarAvaliacao} disabled={encerrandoAvaliacao}>
                                         {encerrandoAvaliacao ? "..." : "Encerrar avaliação"}
                                     </button>
                                 )}

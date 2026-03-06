@@ -294,7 +294,7 @@ export default function PartidaAvaliacaoTimesPage() {
                 {/* HERO */}
                 <div className="av2Hero">
                     <div className="av2HeroBg" />
-                    <img className="av2HeroImg" src="/quadra.png" alt="Quadra" />
+                    <img className="av2HeroImg" src="/quadra-areia.jpg" alt="Quadra" />
                     <div className="av2HeroOverlay" />
 
                     <div className="av2HeroContent">
