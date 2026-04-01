@@ -113,6 +113,7 @@ export default function PartidaDetalhePage() {
     const [data, setData] = useState<PartidaDetalhe | null>(null);
 
     const [souAdminDaEquipe, setSouAdminDaEquipe] = useState(false);
+    const [souMembroDaEquipe, setSouMembroDaEquipe] = useState(false);
     const [meuId, setMeuId] = useState<number | null>(null);
 
     const [acting, setActing] = useState(false);
@@ -143,11 +144,20 @@ export default function PartidaDetalhePage() {
             setData(d);
 
             try {
-                const admRes = await api.get<EquipeAdminResumo[]>("/eu/equipes-administrador");
-                const lista = admRes.data ?? [];
-                setSouAdminDaEquipe(lista.some((e) => e.id === d.equipeId));
+                const [admRes, memRes] = await Promise.all([
+                    api.get<EquipeAdminResumo[]>("/eu/equipes-administrador"),
+                    api.get<EquipeAdminResumo[]>("/eu/equipes"),
+                ]);
+                const admLista = admRes.data ?? [];
+                const memLista = memRes.data ?? [];
+                const isAdmin = admLista.some((e) => Number(e.id) === d.equipeId);
+                const isMembro = memLista.some((e) => Number(e.id) === d.equipeId);
+                setSouAdminDaEquipe(isAdmin);
+                setSouMembroDaEquipe(isAdmin || isMembro);
             } catch {
-                setSouAdminDaEquipe((euRes.data?.id ?? null) === d.criadoPorUsuarioId);
+                const fallback = (euRes.data?.id ?? null) === d.criadoPorUsuarioId;
+                setSouAdminDaEquipe(fallback);
+                setSouMembroDaEquipe(fallback);
             }
 
             setPage((p) => Math.max(1, p));
@@ -410,9 +420,9 @@ export default function PartidaDetalhePage() {
                                 <span className="ptd2Pill ptd2PillSoft">{data.politicaInscricao}</span>
                                 {souAdminDaEquipe ? (
                                     <span className="ptd2Pill ptd2PillAdmin">Você é admin</span>
-                                ) : (
+                                ) : souMembroDaEquipe ? (
                                     <span className="ptd2Pill ptd2PillSoft">Você é membro</span>
-                                )}
+                                ) : null}
                             </div>
                         </div>
 
@@ -651,9 +661,11 @@ export default function PartidaDetalhePage() {
                                 <div className="ptd2FooterTitle">Avaliação liberada</div>
                                 <div className="ptd2FooterText">Agora os jogadores podem enviar avaliações.</div>
 
-                                <button className="ptd2Btn primary" type="button" onClick={() => nav(`/partidas/${data.id}/avaliar`)}>
-                                    Avaliar agora
-                                </button>
+                                {souMembroDaEquipe && (
+                                    <button className="ptd2Btn primary" type="button" onClick={() => nav(`/partidas/${data.id}/avaliar`)}>
+                                        Avaliar agora
+                                    </button>
+                                )}
 
                                 {souAdminDaEquipe && (
                                     <button className="ptd2Btn ptd2BtnGhost" type="button" onClick={onEncerrarAvaliacao} disabled={encerrandoAvaliacao}>

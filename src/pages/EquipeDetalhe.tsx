@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import "../styles/equipedet.css";
 
-import { getEquipe } from "../services/equipe";
+import { getEquipe, entrarEquipeAberta, entrarEquipeFechada } from "../services/equipe";
 import { getEu } from "../services/eu";
 import { promoverAdmin, rebaixarMembro, removerMembro } from "../services/membrosEquipe";
 
@@ -42,6 +42,11 @@ export default function EquipeDetalhePage() {
 
     const [euId, setEuId] = useState<number | null>(null);
     const [souAdmin, setSouAdmin] = useState(false);
+    const [souMembro, setSouMembro] = useState(false);
+
+    const [loadingEntrar, setLoadingEntrar] = useState(false);
+    const [showSenhaModal, setShowSenhaModal] = useState(false);
+    const [senhaInput, setSenhaInput] = useState("");
 
     const [busyUserId, setBusyUserId] = useState<number | null>(null);
     const [confirm, setConfirm] = useState<ConfirmState>(null);
@@ -68,6 +73,7 @@ export default function EquipeDetalhePage() {
 
             const meu = (equipe.membros ?? []).find((m) => m.usuarioId === eu.id);
             setSouAdmin(isAdminRole(meu?.papel));
+            setSouMembro(meu !== undefined);
 
             // garante que a página não fique inválida após reload
             setPage((p) => Math.max(1, p));
@@ -169,6 +175,49 @@ export default function EquipeDetalhePage() {
         if (kind === "REMOVER") return doRemover(usuarioId);
     }
 
+    async function handleEntrar() {
+        if (!equipeId || !data) return;
+
+        if (data.statusEquipe === "FECHADA") {
+            setShowSenhaModal(true);
+            return;
+        }
+
+        setLoadingEntrar(true);
+        setErr(null);
+
+        try {
+            await entrarEquipeAberta(equipeId);
+            setOkMsg("Você entrou na equipe!");
+            await load();
+        } catch (e: any) {
+            const msg = e?.response?.data?.mensagem ?? e?.response?.data?.message ?? JSON.stringify(e?.response?.data);
+            setErr(`Falha ao entrar na equipe: ${msg}`);
+        } finally {
+            setLoadingEntrar(false);
+        }
+    }
+
+    async function handleEntrarComSenha() {
+        if (!equipeId) return;
+
+        setLoadingEntrar(true);
+        setErr(null);
+        setShowSenhaModal(false);
+
+        try {
+            await entrarEquipeFechada(equipeId, senhaInput);
+            setSenhaInput("");
+            setOkMsg("Você entrou na equipe!");
+            await load();
+        } catch (e: any) {
+            const msg = e?.response?.data?.mensagem ?? e?.response?.data?.message ?? JSON.stringify(e?.response?.data);
+            setErr(`Falha ao entrar na equipe: ${msg}`);
+        } finally {
+            setLoadingEntrar(false);
+        }
+    }
+
     if (loading) {
         return (
             <div className="ed2Shell">
@@ -264,9 +313,9 @@ export default function EquipeDetalhePage() {
                                 <span className="ed2Pill ed2PillSoft">{data.statusEquipe}</span>
                                 {souAdmin ? (
                                     <span className="ed2Pill ed2PillAdmin">Você é admin</span>
-                                ) : (
+                                ) : souMembro ? (
                                     <span className="ed2Pill ed2PillSoft">Você é membro</span>
-                                )}
+                                ) : null}
                             </div>
                         </div>
 
@@ -322,10 +371,12 @@ export default function EquipeDetalhePage() {
                         </div>
                     )}
 
-                    <div className="ed2InfoItem">
-                        <div className="ed2InfoLabel">Acesso</div>
-                        <div className="ed2InfoValue">{souAdmin ? "Administrador" : "Membro"}</div>
-                    </div>
+                    {souMembro && (
+                        <div className="ed2InfoItem">
+                            <div className="ed2InfoLabel">Acesso</div>
+                            <div className="ed2InfoValue">{souAdmin ? "Administrador" : "Membro"}</div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Members header */}
@@ -465,11 +516,47 @@ export default function EquipeDetalhePage() {
                         Voltar
                     </button>
 
+                    {!souMembro && (
+                        <button className="ed2Btn" onClick={handleEntrar} disabled={loadingEntrar}>
+                            {loadingEntrar ? "..." : "Entrar na equipe"}
+                        </button>
+                    )}
+
                     <button className="ed2Cta" onClick={() => nav(`/equipes/${data.id}/partidas`)}>
                         Ver partidas <span className="ed2Arrow">→</span>
                     </button>
                 </div>
             </div>
+
+            {/* MODAL SENHA EQUIPE */}
+            {showSenhaModal && (
+                <div className="ed2ModalOverlay" role="dialog" aria-modal="true">
+                    <div className="ed2Modal">
+                        <div className="ed2ModalTitle">Equipe fechada</div>
+                        <div className="ed2ModalText">Digite a senha para entrar em <b>{data.nome}</b>:</div>
+
+                        <input
+                            className="ed2Input"
+                            type="password"
+                            placeholder="Senha da equipe"
+                            value={senhaInput}
+                            onChange={(e) => setSenhaInput(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleEntrarComSenha()}
+                            autoFocus
+                        />
+
+                        <div className="ed2ModalActions">
+                            <button className="ed2BtnSmall ed2BtnGhost" onClick={() => { setShowSenhaModal(false); setSenhaInput(""); }}>
+                                Cancelar
+                            </button>
+
+                            <button className="ed2BtnSmall" onClick={handleEntrarComSenha} disabled={!senhaInput.trim() || loadingEntrar}>
+                                {loadingEntrar ? "..." : "Entrar"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* CONFIRM MODAL */}
             {confirm && (
