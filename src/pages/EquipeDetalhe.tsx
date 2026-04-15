@@ -1,14 +1,13 @@
-// src/pages/EquipeDetalhePage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
-import "../styles/equipedet.css";
-
 import { getEquipe, entrarEquipeAberta, entrarEquipeFechada } from "../services/equipe";
 import { getEu } from "../services/eu";
 import { promoverAdmin, rebaixarMembro, removerMembro } from "../services/membrosEquipe";
-
 import type { EquipeDetalhe } from "../services/equipe";
+import AppHeader from "../components/AppHeader";
+import CountUp from "../components/CountUp";
+import { toast } from "../components/Toast";
+import { explainError, isAuthError } from "../utils/errors";
 
 function fmtISOToBR(iso?: string) {
     if (!iso) return null;
@@ -16,30 +15,21 @@ function fmtISOToBR(iso?: string) {
     if (Number.isNaN(d.getTime())) return null;
     return d.toLocaleString("pt-BR");
 }
-
 function isAdminRole(papel?: string) {
     return papel === "ADMIN" || papel === "ADMINISTRADOR";
 }
 
 type ConfirmState =
     | null
-    | {
-        kind: "PROMOVER" | "REBAIXAR" | "REMOVER";
-        usuarioId: number;
-        nome: string;
-        papel?: string;
-    };
+    | { kind: "PROMOVER" | "REBAIXAR" | "REMOVER"; usuarioId: number; nome: string; papel?: string };
 
 export default function EquipeDetalhePage() {
     const nav = useNavigate();
     const { equipeId } = useParams();
 
     const [loading, setLoading] = useState(true);
-    const [err, setErr] = useState<string | null>(null);
-    const [okMsg, setOkMsg] = useState<string | null>(null);
-
+    const [loadErr, setLoadErr] = useState<string | null>(null);
     const [data, setData] = useState<EquipeDetalhe | null>(null);
-
     const [euId, setEuId] = useState<number | null>(null);
     const [souAdmin, setSouAdmin] = useState(false);
     const [souMembro, setSouMembro] = useState(false);
@@ -51,56 +41,35 @@ export default function EquipeDetalhePage() {
     const [busyUserId, setBusyUserId] = useState<number | null>(null);
     const [confirm, setConfirm] = useState<ConfirmState>(null);
 
-    // ===== PAGINAÇÃO =====
     const PAGE_SIZE = 10;
     const [page, setPage] = useState(1);
 
     async function load() {
         try {
-            setErr(null);
-            setOkMsg(null);
+            setLoadErr(null);
             setLoading(true);
-
-            if (!equipeId) {
-                setErr("ID de equipe ausente.");
-                return;
-            }
-
+            if (!equipeId) { setLoadErr("ID de equipe ausente."); return; }
             const [eu, equipe] = await Promise.all([getEu(), getEquipe(equipeId)]);
-
             setEuId(eu.id);
             setData(equipe);
-
             const meu = (equipe.membros ?? []).find((m) => m.usuarioId === eu.id);
             setSouAdmin(isAdminRole(meu?.papel));
             setSouMembro(meu !== undefined);
-
-            // garante que a página não fique inválida após reload
             setPage((p) => Math.max(1, p));
         } catch (e: any) {
-            const status = e?.response?.status;
-            const resData = e?.response?.data;
-
-            setErr(status ? `Erro (HTTP ${status}): ${JSON.stringify(resData)}` : "Falha de rede / backend fora.");
-        } finally {
-            setLoading(false);
-        }
+            if (isAuthError(e)) return;
+            const msg = explainError(e);
+            setLoadErr(msg);
+            toast.error(msg, "Falha ao carregar equipe");
+        } finally { setLoading(false); }
     }
 
-    useEffect(() => {
-        load();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [equipeId]);
+    useEffect(() => { load(); /* eslint-disable-next-line */ }, [equipeId]);
 
     const membros = useMemo(() => data?.membros ?? [], [data]);
-
     const membrosAtivos = useMemo(() => membros.filter((m) => m.ativo).length, [membros]);
-
     const adminsAtivos = useMemo(() => membros.filter((m) => m.ativo && isAdminRole(m.papel)).length, [membros]);
-
-    // ===== PAGINAÇÃO DERIVADOS =====
     const totalMembros = membros.length;
-
     const totalPages = useMemo(() => Math.max(1, Math.ceil(totalMembros / PAGE_SIZE)), [totalMembros]);
 
     useEffect(() => {
@@ -110,66 +79,35 @@ export default function EquipeDetalhePage() {
 
     const pageStart = (page - 1) * PAGE_SIZE;
     const pageEnd = Math.min(pageStart + PAGE_SIZE, totalMembros);
-
     const membrosPaginados = useMemo(() => membros.slice(pageStart, pageEnd), [membros, pageStart, pageEnd]);
 
     async function doPromover(usuarioId: number) {
         if (!data) return;
         setBusyUserId(usuarioId);
-
-        try {
-            await promoverAdmin(data.id, usuarioId);
-            setOkMsg("Usuário promovido a administrador.");
-            await load();
-        } catch {
-            setErr("Falha ao promover administrador.");
-        } finally {
-            setBusyUserId(null);
-        }
+        try { await promoverAdmin(data.id, usuarioId); toast.success("Usuário promovido a administrador."); await load(); }
+        catch (e: any) { if (!isAuthError(e)) toast.error(explainError(e), "Falha ao promover"); }
+        finally { setBusyUserId(null); }
     }
-
     async function doRebaixar(usuarioId: number) {
         if (!data) return;
-
-        if (adminsAtivos <= 1) {
-            setErr("Não é possível rebaixar o último administrador.");
-            return;
-        }
-
+        if (adminsAtivos <= 1) { toast.warn("Não é possível rebaixar o último administrador."); return; }
         setBusyUserId(usuarioId);
-
-        try {
-            await rebaixarMembro(data.id, usuarioId);
-            setOkMsg("Administrador rebaixado para membro.");
-            await load();
-        } catch {
-            setErr("Falha ao rebaixar membro.");
-        } finally {
-            setBusyUserId(null);
-        }
+        try { await rebaixarMembro(data.id, usuarioId); toast.success("Administrador rebaixado."); await load(); }
+        catch (e: any) { if (!isAuthError(e)) toast.error(explainError(e), "Falha ao rebaixar"); }
+        finally { setBusyUserId(null); }
     }
-
     async function doRemover(usuarioId: number) {
         if (!data) return;
         setBusyUserId(usuarioId);
-
-        try {
-            await removerMembro(data.id, usuarioId);
-            setOkMsg("Membro removido.");
-            await load();
-        } catch {
-            setErr("Falha ao remover membro.");
-        } finally {
-            setBusyUserId(null);
-        }
+        try { await removerMembro(data.id, usuarioId); toast.success("Membro removido."); await load(); }
+        catch (e: any) { if (!isAuthError(e)) toast.error(explainError(e), "Falha ao remover"); }
+        finally { setBusyUserId(null); }
     }
 
     async function handleConfirmAction() {
         if (!confirm) return;
         const { kind, usuarioId } = confirm;
-
         setConfirm(null);
-
         if (kind === "PROMOVER") return doPromover(usuarioId);
         if (kind === "REBAIXAR") return doRebaixar(usuarioId);
         if (kind === "REMOVER") return doRemover(usuarioId);
@@ -177,92 +115,66 @@ export default function EquipeDetalhePage() {
 
     async function handleEntrar() {
         if (!equipeId || !data) return;
-
-        if (data.statusEquipe === "FECHADA") {
-            setShowSenhaModal(true);
-            return;
-        }
-
+        if (data.statusEquipe === "FECHADA") { setShowSenhaModal(true); return; }
         setLoadingEntrar(true);
-        setErr(null);
-
         try {
             await entrarEquipeAberta(equipeId);
-            setOkMsg("Você entrou na equipe!");
+            toast.success("Você entrou na equipe!");
             await load();
         } catch (e: any) {
-            const msg = e?.response?.data?.mensagem ?? e?.response?.data?.message ?? JSON.stringify(e?.response?.data);
-            setErr(`Falha ao entrar na equipe: ${msg}`);
-        } finally {
-            setLoadingEntrar(false);
-        }
+            if (!isAuthError(e)) toast.error(explainError(e), "Falha ao entrar");
+        } finally { setLoadingEntrar(false); }
     }
 
     async function handleEntrarComSenha() {
         if (!equipeId) return;
-
+        if (!senhaInput.trim()) { toast.warn("Informe a senha da equipe."); return; }
         setLoadingEntrar(true);
-        setErr(null);
         setShowSenhaModal(false);
-
         try {
             await entrarEquipeFechada(equipeId, senhaInput);
             setSenhaInput("");
-            setOkMsg("Você entrou na equipe!");
+            toast.success("Você entrou na equipe!");
             await load();
         } catch (e: any) {
-            const msg = e?.response?.data?.mensagem ?? e?.response?.data?.message ?? JSON.stringify(e?.response?.data);
-            setErr(`Falha ao entrar na equipe: ${msg}`);
-        } finally {
-            setLoadingEntrar(false);
-        }
+            if (!isAuthError(e)) toast.error(explainError(e), "Falha ao entrar");
+        } finally { setLoadingEntrar(false); }
     }
 
     if (loading) {
         return (
-            <div className="ed2Shell">
-                <div className="ed2Card ed2Center">
-                    <div className="ed2Spinner" />
-                    <div className="ed2Muted">Carregando equipe...</div>
-                </div>
+            <div className="x-app">
+                <AppHeader />
+                <main className="x-app-main">
+                    <div className="x-loading"><div className="x-spinner" /> Carregando equipe...</div>
+                </main>
             </div>
         );
     }
 
-    if (err) {
+    if (loadErr && !data) {
         return (
-            <div className="ed2Shell">
-                <div className="ed2Card">
-                    <div className="ed2Top">
-                        <button className="ed2IconBtn" onClick={() => nav(-1)} aria-label="Voltar">
-                            ←
-                        </button>
-
-                        <div className="ed2Brand">
-                            <img className="ed2Logo" src="/logo-oficial.png" alt="Logo" />
-                            <div className="ed2TitleWrap">
-                                <div className="ed2Title">Detalhes da equipe</div>
-                                <div className="ed2Muted">Administração e membros</div>
+            <div className="x-app">
+                <AppHeader />
+                <main className="x-app-main">
+                    <div className="x-app-container">
+                        <div className="x-empty">
+                            <div className="x-empty-icon">
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="12" y1="8" x2="12" y2="13" />
+                                    <line x1="12" y1="16" x2="12" y2="16.1" />
+                                </svg>
+                            </div>
+                            <h3 className="x-empty-title">Não foi possível carregar</h3>
+                            <p className="x-empty-text">{loadErr}</p>
+                            <div style={{ display: "flex", gap: 10 }}>
+                                <button className="x-btn ghost sm" onClick={() => nav(-1)}>Voltar</button>
+                                <button className="x-btn sm" onClick={() => load()}>Tentar novamente</button>
                             </div>
                         </div>
-
-                        <div />
                     </div>
-
-                    <div className="ed2Alert ed2AlertErr">
-                        <div className="ed2AlertTitle">Erro</div>
-                        <div className="ed2AlertText">{err}</div>
-                    </div>
-
-                    <div className="ed2ActionsRow">
-                        <button className="ed2Btn" onClick={() => nav(-1)}>
-                            Voltar
-                        </button>
-                        <button className="ed2Btn ed2BtnGhost" onClick={() => load()}>
-                            Tentar novamente
-                        </button>
-                    </div>
-                </div>
+                </main>
             </div>
         );
     }
@@ -270,287 +182,169 @@ export default function EquipeDetalhePage() {
     if (!data) return null;
 
     const criadoEm = fmtISOToBR((data as any)?.criadoEm);
-    const criadoPor = (data as any)?.criadoPorUsuarioId;
 
     return (
-        <div className="ed2Shell">
-            <div className="ed2Card">
-                {/* TOP */}
-                <div className="ed2Top">
-                    <button className="ed2IconBtn" onClick={() => nav(-1)} aria-label="Voltar">
-                        ←
-                    </button>
+        <div className="x-app">
+            <AppHeader />
 
-                    <div className="ed2Brand">
-                        <img className="ed2Logo" src="/logo-oficial.png" alt="Logo" />
-                        <div className="ed2TitleWrap">
-                            <div className="ed2Title">Detalhes da equipe</div>
-                            <div className="ed2Muted">Administração e membros</div>
-                        </div>
-                    </div>
-
-                    <button className="ed2IconBtn" onClick={() => load()} aria-label="Recarregar">
-                        ↻
-                    </button>
-                </div>
-
-                {/* HERO */}
-                <div className="ed2Hero">
-                    <div className="ed2HeroBg" />
-                    <img className="ed2HeroImg" src="/quadra-areia.jpg" alt="Quadra" />
-                    <div className="ed2HeroOverlay" />
-
-                    <div className="ed2HeroContent">
-                        <div className="ed2HeroLeft">
-                            <div className="ed2TeamName">{data.nome}</div>
-                            <div className="ed2TeamSub">
-                                <span className="ed2Dot" />
-                                <span className="ed2TeamLoc">{data.cepOuLocal}</span>
-                            </div>
-
-                            <div className="ed2Pills">
-                                <span className="ed2Pill">{data.esporte}</span>
-                                <span className="ed2Pill ed2PillSoft">{data.statusEquipe}</span>
-                                {souAdmin ? (
-                                    <span className="ed2Pill ed2PillAdmin">Você é admin</span>
-                                ) : souMembro ? (
-                                    <span className="ed2Pill ed2PillSoft">Você é membro</span>
-                                ) : null}
-                            </div>
-                        </div>
-
-                        <div className="ed2HeroRight">
-                            <div className="ed2Stat">
-                                <div className="ed2StatLabel">Membros ativos</div>
-                                <div className="ed2StatValue">
-                                    {membrosAtivos}
-                                    <span className="ed2StatSmall">/ {membros.length}</span>
-                                </div>
-                            </div>
-
-                            <div className="ed2Stat">
-                                <div className="ed2StatLabel">Admins ativos</div>
-                                <div className="ed2StatValue">{adminsAtivos}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Alerts */}
-                {(okMsg || err) && (
-                    <div className={`ed2Alert ${okMsg ? "ed2AlertOk" : "ed2AlertErr"}`}>
+            <div className="x-phero">
+                <div className="x-phero-inner">
+                    <button className="x-phero-back" onClick={() => nav(-1)}>← Voltar</button>
+                    <div className="x-phero-grid">
                         <div>
-                            <div className="ed2AlertTitle">{okMsg ? "Sucesso" : "Erro"}</div>
-                            <div className="ed2AlertText">{okMsg || err}</div>
-                        </div>
-
-                        <button className="ed2AlertClose" onClick={() => (okMsg ? setOkMsg(null) : setErr(null))}>
-                            ×
-                        </button>
-                    </div>
-                )}
-
-                {/* Info grid */}
-                <div className="ed2InfoGrid">
-                    <div className="ed2InfoItem">
-                        <div className="ed2InfoLabel">Dias/Horários</div>
-                        <div className="ed2InfoValue">{data.diasHorariosPadrao || "—"}</div>
-                    </div>
-
-                    {criadoEm && (
-                        <div className="ed2InfoItem">
-                            <div className="ed2InfoLabel">Criado em</div>
-                            <div className="ed2InfoValue">{criadoEm}</div>
-                        </div>
-                    )}
-
-                    {criadoPor && (
-                        <div className="ed2InfoItem">
-                            <div className="ed2InfoLabel">Criado por</div>
-                            <div className="ed2InfoValue">{String(criadoPor)}</div>
-                        </div>
-                    )}
-
-                    {souMembro && (
-                        <div className="ed2InfoItem">
-                            <div className="ed2InfoLabel">Acesso</div>
-                            <div className="ed2InfoValue">{souAdmin ? "Administrador" : "Membro"}</div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Members header */}
-                <div className="ed2SectionHead">
-                    <div>
-                        <div className="ed2SectionTitle">Membros</div>
-                        <div className="ed2Muted">Ações só aparecem para administradores.</div>
-                    </div>
-
-                    <div className="ed2SectionRight">
-                        <span className="ed2CountBadge">{membros.length} no total</span>
-                    </div>
-                </div>
-
-                {/* PAGER (só se > 10) */}
-                {totalMembros > PAGE_SIZE && (
-                    <div className="ed2Pager">
-                        <div className="ed2PagerInfo">
-                            Mostrando <b>{pageStart + 1}</b>–<b>{pageEnd}</b> de <b>{totalMembros}</b>
-                        </div>
-
-                        <div className="ed2PagerBtns">
-                            <button className="ed2BtnSmall ed2BtnGhost" onClick={() => setPage(1)} disabled={page === 1} title="Primeira">
-                                «
-                            </button>
-
-                            <button
-                                className="ed2BtnSmall ed2BtnGhost"
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                disabled={page === 1}
-                                title="Anterior"
-                            >
-                                ←
-                            </button>
-
-                            <div className="ed2PagerPage">
-                                Página <b>{page}</b> / <b>{totalPages}</b>
+                            <h1 className="x-phero-title">{data.nome}</h1>
+                            <div className="x-meta" style={{ marginBottom: 18 }}>{data.cepOuLocal}</div>
+                            <div className="x-phero-meta">
+                                <span className="x-pill">{data.esporte}</span>
+                                <span className="x-pill">{data.statusEquipe}</span>
+                                {souAdmin && <span className="x-pill accent">Você é admin</span>}
+                                {!souAdmin && souMembro && <span className="x-pill success">Membro</span>}
                             </div>
-
-                            <button
-                                className="ed2BtnSmall ed2BtnGhost"
-                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages}
-                                title="Próxima"
-                            >
-                                →
-                            </button>
-
-                            <button
-                                className="ed2BtnSmall ed2BtnGhost"
-                                onClick={() => setPage(totalPages)}
-                                disabled={page === totalPages}
-                                title="Última"
-                            >
-                                »
+                        </div>
+                        <div className="x-phero-actions">
+                            <button className="x-btn ghost sm" onClick={() => load()}>Recarregar</button>
+                            {!souMembro && (
+                                <button className="x-btn" onClick={handleEntrar} disabled={loadingEntrar}>
+                                    {loadingEntrar ? "..." : "Entrar na equipe"}
+                                </button>
+                            )}
+                            <button className="x-btn" onClick={() => nav(`/equipes/${data.id}/partidas`)}>
+                                Ver partidas <span className="x-btn-arr">→</span>
                             </button>
                         </div>
                     </div>
-                )}
-
-                {/* Members list */}
-                <div className="ed2List">
-                    {membrosPaginados.map((m) => {
-                        const isMe = euId === m.usuarioId;
-                        const canManage = souAdmin && !isMe;
-
-                        const roleLabel = isAdminRole(m.papel) ? "Admin" : "Membro";
-                        const activeLabel = m.ativo ? "Ativo" : "Inativo";
-
-                        return (
-                            <div key={m.usuarioId} className={`ed2Row ${m.ativo ? "isActive" : "isInactive"}`}>
-                                <div className="ed2RowMain">
-                                    <div className="ed2Avatar" aria-hidden="true">
-                                        {String(m.nome || "?").trim().charAt(0).toUpperCase()}
-                                    </div>
-
-                                    <div className="ed2RowText">
-                                        <div className="ed2RowName">
-                                            {m.nome}
-                                            {isMe && <span className="ed2MeTag">você</span>}
-                                        </div>
-
-                                        <div className="ed2RowMeta">
-                                            <span className={`ed2Tag ${isAdminRole(m.papel) ? "ed2TagAdmin" : "ed2TagSoft"}`}>{roleLabel}</span>
-                                            <span className={`ed2Tag ${m.ativo ? "ed2TagOk" : "ed2TagSoft"}`}>{activeLabel}</span>
-                                            <span className="ed2Tag ed2TagSoft">ID: {m.usuarioId}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="ed2RowActions">
-                                    {canManage ? (
-                                        <>
-                                            {isAdminRole(m.papel) ? (
-                                                <button
-                                                    className="ed2BtnSmall ed2BtnGhost"
-                                                    disabled={busyUserId === m.usuarioId}
-                                                    onClick={() => setConfirm({ kind: "REBAIXAR", usuarioId: m.usuarioId, nome: m.nome, papel: m.papel })}
-                                                    title="Rebaixar para membro"
-                                                >
-                                                    Rebaixar
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    className="ed2BtnSmall"
-                                                    disabled={busyUserId === m.usuarioId}
-                                                    onClick={() => setConfirm({ kind: "PROMOVER", usuarioId: m.usuarioId, nome: m.nome, papel: m.papel })}
-                                                    title="Promover para administrador"
-                                                >
-                                                    Promover
-                                                </button>
-                                            )}
-
-                                            <button
-                                                className="ed2BtnSmall ed2BtnDanger"
-                                                disabled={busyUserId === m.usuarioId}
-                                                onClick={() => setConfirm({ kind: "REMOVER", usuarioId: m.usuarioId, nome: m.nome, papel: m.papel })}
-                                                title="Remover membro"
-                                            >
-                                                Remover
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <span className="ed2Muted">—</span>
-                                    )}
-                                </div>
-
-                                {busyUserId === m.usuarioId && <div className="ed2RowBusy" aria-hidden="true" />}
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* CTA */}
-                <div className="ed2Footer">
-                    <button className="ed2Btn ed2BtnGhost" onClick={() => nav(-1)}>
-                        Voltar
-                    </button>
-
-                    {!souMembro && (
-                        <button className="ed2Btn" onClick={handleEntrar} disabled={loadingEntrar}>
-                            {loadingEntrar ? "..." : "Entrar na equipe"}
-                        </button>
-                    )}
-
-                    <button className="ed2Cta" onClick={() => nav(`/equipes/${data.id}/partidas`)}>
-                        Ver partidas <span className="ed2Arrow">→</span>
-                    </button>
                 </div>
             </div>
 
-            {/* MODAL SENHA EQUIPE */}
-            {showSenhaModal && (
-                <div className="ed2ModalOverlay" role="dialog" aria-modal="true">
-                    <div className="ed2Modal">
-                        <div className="ed2ModalTitle">Equipe fechada</div>
-                        <div className="ed2ModalText">Digite a senha para entrar em <b>{data.nome}</b>:</div>
+            <main className="x-app-main">
+                <div className="x-app-container">
+                    {/* Stats */}
+                    <div className="x-stats x-stagger" style={{ marginBottom: 32 }}>
+                        <div className="x-stat x-reveal">
+                            <div className="x-stat-lbl">Membros ativos</div>
+                            <div className="x-stat-val"><CountUp to={membrosAtivos} /><em>/{totalMembros}</em></div>
+                        </div>
+                        <div className="x-stat x-reveal">
+                            <div className="x-stat-lbl">Administradores</div>
+                            <div className="x-stat-val"><CountUp to={adminsAtivos} /></div>
+                        </div>
+                        <div className="x-stat x-reveal">
+                            <div className="x-stat-lbl">Agenda padrão</div>
+                            <div className="x-stat-val" style={{ fontSize: 14, fontWeight: 600 }}>
+                                {data.diasHorariosPadrao || "—"}
+                            </div>
+                        </div>
+                        <div className="x-stat x-reveal">
+                            <div className="x-stat-lbl">Criada em</div>
+                            <div className="x-stat-val" style={{ fontSize: 14, fontWeight: 600 }}>
+                                {criadoEm ?? "—"}
+                            </div>
+                        </div>
+                    </div>
 
+                    {/* Members */}
+                    <div className="x-card pad-lg">
+                        <div className="x-card-title">
+                            Membros
+                            <span className="x-pill">{totalMembros}</span>
+                        </div>
+                        <p className="x-card-sub">Ações só aparecem para administradores.</p>
+                        <hr className="x-divider" />
+
+                        <div className="x-list">
+                            {membrosPaginados.map((m) => {
+                                const isMe = euId === m.usuarioId;
+                                const canManage = souAdmin && !isMe;
+                                const isAdm = isAdminRole(m.papel);
+
+                                return (
+                                    <div key={m.usuarioId} className={`x-row ${m.ativo ? "" : "dim"}`}>
+                                        <div className="x-avatar sm">
+                                            {String(m.nome || "?").trim().charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="x-row-main">
+                                            <div className="x-row-name">
+                                                {m.nome}
+                                                {isMe && <span className="x-row-me">você</span>}
+                                            </div>
+                                            <div className="x-row-meta">
+                                                <span className={`x-pill ${isAdm ? "accent" : ""}`}>{isAdm ? "Admin" : "Membro"}</span>
+                                                <span className={`x-pill ${m.ativo ? "success" : ""}`}>{m.ativo ? "Ativo" : "Inativo"}</span>
+                                            </div>
+                                        </div>
+                                        <div className="x-row-actions">
+                                            {canManage ? (
+                                                <>
+                                                    {isAdm ? (
+                                                        <button
+                                                            className="x-btn ghost sm"
+                                                            disabled={busyUserId === m.usuarioId}
+                                                            onClick={() => setConfirm({ kind: "REBAIXAR", usuarioId: m.usuarioId, nome: m.nome, papel: m.papel })}
+                                                        >Rebaixar</button>
+                                                    ) : (
+                                                        <button
+                                                            className="x-btn sm"
+                                                            disabled={busyUserId === m.usuarioId}
+                                                            onClick={() => setConfirm({ kind: "PROMOVER", usuarioId: m.usuarioId, nome: m.nome, papel: m.papel })}
+                                                        >Promover</button>
+                                                    )}
+                                                    <button
+                                                        className="x-btn danger sm"
+                                                        disabled={busyUserId === m.usuarioId}
+                                                        onClick={() => setConfirm({ kind: "REMOVER", usuarioId: m.usuarioId, nome: m.nome, papel: m.papel })}
+                                                    >Remover</button>
+                                                </>
+                                            ) : (
+                                                <span className="x-meta">—</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {totalMembros > PAGE_SIZE && (
+                            <div className="x-pager">
+                                <div className="x-pager-info">
+                                    Mostrando <b>{pageStart + 1}</b>–<b>{pageEnd}</b> de <b>{totalMembros}</b>
+                                </div>
+                                <div className="x-pager-btns">
+                                    <button className="x-btn ghost sm" onClick={() => setPage(1)} disabled={page === 1}>«</button>
+                                    <button className="x-btn ghost sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>←</button>
+                                    <span className="x-meta" style={{ padding: "0 8px" }}>{page} / {totalPages}</span>
+                                    <button className="x-btn ghost sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>→</button>
+                                    <button className="x-btn ghost sm" onClick={() => setPage(totalPages)} disabled={page === totalPages}>»</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </main>
+
+            {/* Modal de senha */}
+            {showSenhaModal && (
+                <div className="x-modal-overlay" onClick={() => setShowSenhaModal(false)}>
+                    <div className="x-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="x-eyebrow">Equipe fechada</div>
+                        <h3 className="x-modal-title" style={{ marginTop: 12 }}>
+                            Digite a senha
+                        </h3>
+                        <p className="x-modal-text">
+                            Para entrar em <b>{data.nome}</b>, informe a senha da equipe.
+                        </p>
                         <input
-                            className="ed2Input"
+                            className="x-input"
                             type="password"
-                            placeholder="Senha da equipe"
+                            placeholder="Senha"
                             value={senhaInput}
                             onChange={(e) => setSenhaInput(e.target.value)}
                             onKeyDown={(e) => e.key === "Enter" && handleEntrarComSenha()}
                             autoFocus
+                            style={{ marginBottom: 20 }}
                         />
-
-                        <div className="ed2ModalActions">
-                            <button className="ed2BtnSmall ed2BtnGhost" onClick={() => { setShowSenhaModal(false); setSenhaInput(""); }}>
-                                Cancelar
-                            </button>
-
-                            <button className="ed2BtnSmall" onClick={handleEntrarComSenha} disabled={!senhaInput.trim() || loadingEntrar}>
+                        <div className="x-modal-actions">
+                            <button className="x-btn ghost" onClick={() => { setShowSenhaModal(false); setSenhaInput(""); }}>Cancelar</button>
+                            <button className="x-btn" onClick={handleEntrarComSenha} disabled={!senhaInput.trim() || loadingEntrar}>
                                 {loadingEntrar ? "..." : "Entrar"}
                             </button>
                         </div>
@@ -558,46 +352,33 @@ export default function EquipeDetalhePage() {
                 </div>
             )}
 
-            {/* CONFIRM MODAL */}
+            {/* Modal de confirmação */}
             {confirm && (
-                <div className="ed2ModalOverlay" role="dialog" aria-modal="true">
-                    <div className="ed2Modal">
-                        <div className="ed2ModalTitle">Confirmar ação</div>
-
-                        <div className="ed2ModalText">
-                            {confirm.kind === "PROMOVER" && (
-                                <>
-                                    Promover <b>{confirm.nome}</b> para <b>administrador</b>?
-                                </>
-                            )}
-                            {confirm.kind === "REBAIXAR" && (
-                                <>
-                                    Rebaixar <b>{confirm.nome}</b> para <b>membro</b>?
-                                </>
-                            )}
-                            {confirm.kind === "REMOVER" && (
-                                <>
-                                    Remover <b>{confirm.nome}</b> da equipe?
-                                </>
-                            )}
-                        </div>
-
+                <div className="x-modal-overlay" onClick={() => setConfirm(null)}>
+                    <div className="x-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="x-eyebrow">Confirmar ação</div>
+                        <h3 className="x-modal-title" style={{ marginTop: 12 }}>
+                            {confirm.kind === "PROMOVER" && "Promover membro"}
+                            {confirm.kind === "REBAIXAR" && "Rebaixar admin"}
+                            {confirm.kind === "REMOVER" && "Remover membro"}
+                        </h3>
+                        <p className="x-modal-text">
+                            {confirm.kind === "PROMOVER" && <>Promover <b>{confirm.nome}</b> para administrador?</>}
+                            {confirm.kind === "REBAIXAR" && <>Rebaixar <b>{confirm.nome}</b> para membro?</>}
+                            {confirm.kind === "REMOVER" && <>Remover <b>{confirm.nome}</b> da equipe?</>}
+                        </p>
                         {confirm.kind === "REBAIXAR" && adminsAtivos <= 1 && (
-                            <div className="ed2ModalWarn">Você não pode rebaixar o último administrador.</div>
+                            <div className="x-alert err" style={{ marginBottom: 20 }}>
+                                <div><span className="x-alert-text">Você não pode rebaixar o último administrador.</span></div>
+                            </div>
                         )}
-
-                        <div className="ed2ModalActions">
-                            <button className="ed2BtnSmall ed2BtnGhost" onClick={() => setConfirm(null)}>
-                                Cancelar
-                            </button>
-
+                        <div className="x-modal-actions">
+                            <button className="x-btn ghost" onClick={() => setConfirm(null)}>Cancelar</button>
                             <button
-                                className={`ed2BtnSmall ${confirm.kind === "REMOVER" ? "ed2BtnDanger" : ""}`}
+                                className={`x-btn ${confirm.kind === "REMOVER" ? "danger" : ""}`}
                                 onClick={handleConfirmAction}
                                 disabled={busyUserId === confirm.usuarioId || (confirm.kind === "REBAIXAR" && adminsAtivos <= 1)}
-                            >
-                                Confirmar
-                            </button>
+                            >Confirmar</button>
                         </div>
                     </div>
                 </div>

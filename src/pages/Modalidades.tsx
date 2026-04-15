@@ -1,71 +1,80 @@
 import { useNavigate } from "react-router-dom";
+import SiteHeader from "../components/SiteHeader";
+import SiteFooter from "../components/SiteFooter";
 
 export default function Modalidades() {
-    const navigate = useNavigate();
-    const path = window.location.pathname;
+    const nav = useNavigate();
 
     return (
-        <main className="lp2">
-            <header className="lp2-nav">
-                <div className="lp2-nav-inner">
-                    <button className="lp2-brand" onClick={() => navigate("/")}>
-                        <img src="/icon-bola.png" className="lp2-brand-logo" alt="ClubeDoFut" />
-                        <span className="lp2-brand-name">ClubeDoFut</span>
-                    </button>
-                    <nav className="lp2-links">
-                        <button className={`lp2-link ${path === '/' ? 'active' : ''}`} onClick={() => navigate("/")}>Início</button>
-                        <button className={`lp2-link ${path === '/beneficios' ? 'active' : ''}`} onClick={() => navigate("/beneficios")}>Benefícios</button>
-                        <button className={`lp2-link ${path === '/modalidades' ? 'active' : ''}`} onClick={() => navigate("/modalidades")}>Modalidades</button>
-                        <button className={`lp2-link ${path === '/como-funciona' ? 'active' : ''}`} onClick={() => navigate("/como-funciona")}>Como Funciona</button>
-                    </nav>
-                    <div className="lp2-actions">
-                        <button className="lp2-btn ghost" onClick={() => navigate("/login")}>Entrar</button>
-                        <button className="lp2-btn" onClick={() => navigate("/register")}>Criar Conta</button>
-                    </div>
-                </div>
-            </header>
+        <main className="x">
+            <SiteHeader />
 
-            <section className="lp2-section alt" style={{ minHeight: '70vh' }}>
-                <div className="lp2-container">
-                    <h2 className="lp2-h2">Feito para a sua paixão</h2>
-                    <p className="lp2-p">Sua equipe merece uma gestão à altura da sua dedicação ao esporte.</p>
-
-                    <div className="lp2-gallery">
-                        <article className="lp2-gItem">
-                            <img className="lp2-gImg" src="/indoor.jpg" alt="Vôlei de Quadra" loading="lazy" />
-                            <div className="lp2-gOverlay">
-                                <div className="lp2-gTitle">Vôlei Indoor</div>
-                                <div className="lp2-gSub">O tradicional jogo de quadra</div>
-                            </div>
-                        </article>
-                        <article className="lp2-gItem">
-                            <img className="lp2-gImg" src="/volei-praia.jpg" alt="Futevôlei" loading="lazy" />
-                            <div className="lp2-gOverlay">
-                                <div className="lp2-gTitle">Futevôlei</div>
-                                <div className="lp2-gSub">Altinha, clínicas e rachões</div>
-                            </div>
-                        </article>
-                        <article className="lp2-gItem">
-                            <img className="lp2-gImg" src="/brunobarros.avif" alt="Treinos e Torneios" loading="lazy" />
-                            <div className="lp2-gOverlay">
-                                <div className="lp2-gTitle">Treinos</div>
-                                <div className="lp2-gSub">Treine e divirta-se</div>
-                            </div>
-                        </article>
+            <section className="x-hero">
+                <div className="x-wide">
+                    <div style={{ maxWidth: 860 }}>
+                        <div className="x-eyebrow x-reveal">Modalidades</div>
+                        <h1 className="x-h1 x-reveal x-d-1" style={{ marginTop: 20 }}>
+                            Feito para a sua<br /><em>paixão</em>.
+                        </h1>
+                        <p className="x-lead x-reveal x-d-2" style={{ marginTop: 28, maxWidth: 640 }}>
+                            Sua equipe merece uma gestão à altura da dedicação com a qual você encara o esporte.
+                            Seja na quadra, na areia, ou no treino da semana.
+                        </p>
                     </div>
                 </div>
             </section>
 
-            <footer className="lp2-footer" style={{ width: 'min(1120px, calc(100% - 32px))', margin: '0 auto 32px' }}>
-                <div className="lp2-footerLeft">
-                    <img src="/icon-bola.png" className="lp2-footerIcon" style={{ filter: 'grayscale(100%) opacity(0.7)' }} alt="" />
-                    <span>ClubeDoFut • A Plataforma Oficial das Quadras e Areias</span>
+            <section className="x-section compact">
+                <div className="x-wide">
+                    <div className="x-mods x-stagger">
+                        <article className="x-mod big x-reveal">
+                            <img src="/volei-praia.jpg" alt="Futevôlei" loading="lazy" />
+                            <div className="x-mod-content">
+                                <div className="x-mod-cat">Modalidade 01 · Areia</div>
+                                <h3 className="x-mod-title">Futevôlei</h3>
+                                <p className="x-mod-desc">
+                                    Altinha, clínicas e rachões na praia. Da dupla casual ao campeonato sério —
+                                    organize 2×2 ou 4×4 com nivelamento automático baseado em notas de 0 a 10.
+                                    O jogo flui, a disputa aperta.
+                                </p>
+                            </div>
+                        </article>
+
+                        <article className="x-mod x-reveal">
+                            <img src="/indoor.jpg" alt="Vôlei Indoor" loading="lazy" />
+                            <div className="x-mod-content">
+                                <div className="x-mod-cat">Modalidade 02 · Quadra</div>
+                                <h3 className="x-mod-title">Vôlei Indoor</h3>
+                                <p className="x-mod-desc">
+                                    O tradicional jogo de quadra, do 6×6 clássico ao treino de fundamento.
+                                </p>
+                            </div>
+                        </article>
+
+                        <article className="x-mod x-reveal">
+                            <img src="/brunobarros.avif" alt="Treinos" loading="lazy" />
+                            <div className="x-mod-content">
+                                <div className="x-mod-cat">Modalidade 03 · Evolução</div>
+                                <h3 className="x-mod-title">Treinos</h3>
+                                <p className="x-mod-desc">
+                                    Treine, evolua e jogue com quem está no seu nível.
+                                </p>
+                            </div>
+                        </article>
+                    </div>
+
+                    <div style={{ marginTop: 56, display: "flex", gap: 14, flexWrap: "wrap" }}>
+                        <button className="x-btn lg" onClick={() => nav("/register")}>
+                            Criar conta grátis <span className="x-btn-arr">→</span>
+                        </button>
+                        <button className="x-btn outline lg" onClick={() => nav("/como-funciona")}>
+                            Ver como funciona
+                        </button>
+                    </div>
                 </div>
-                <div className="lp2-footerRight" style={{ display: 'flex', gap: '16px' }}>
-                    <button className="lp2-link" onClick={() => navigate("/login")}>Acessar Conta</button>
-                    <button className="lp2-link" onClick={() => navigate("/register")}>Novo Cadastro</button>
-                </div>
-            </footer>
+            </section>
+
+            <SiteFooter />
         </main>
     );
 }

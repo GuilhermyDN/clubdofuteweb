@@ -1,54 +1,25 @@
-// src/pages/EquipesPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type {
-    CriarEquipeBody,
-    EquipeDetalhe,
-    EquipeResumo,
-    Esporte,
-    StatusEquipe,
-} from "../services/equipe";
+import type { CriarEquipeBody, EquipeDetalhe, EquipeResumo, Esporte, StatusEquipe } from "../services/equipe";
 import {
-    buscarEquipes,
-    criarEquipe,
-    entrarEquipeAberta,
-    entrarEquipeFechada,
-    getEquipe,
-    listarMinhasEquipes,
+    buscarEquipes, criarEquipe, entrarEquipeAberta, entrarEquipeFechada, getEquipe, listarMinhasEquipes,
 } from "../services/equipe";
+import AppHeader from "../components/AppHeader";
+import { toast } from "../components/Toast";
+import { explainError, isAuthError } from "../utils/errors";
 
-function normalizeStr(v: string) {
-    return (v ?? "").trim();
-}
-
-function explainAxiosError(e: any) {
-    const status = e?.response?.status;
-    const data = e?.response?.data;
-    if (status) return `Erro (HTTP ${status}): ${JSON.stringify(data)}`;
-    return "Falha de rede / backend indisponível.";
-}
-
+function normalizeStr(v: string) { return (v ?? "").trim(); }
 function maskCepOuLocal(v: string) {
     const onlyNums = v.replace(/\D/g, "");
-
     if (/^\d*$/.test(v)) {
         const nums = onlyNums.slice(0, 8);
         if (nums.length <= 5) return nums;
         return `${nums.slice(0, 5)}-${nums.slice(5)}`;
     }
-
     return v;
 }
 
-type DiaKey =
-    | "segunda"
-    | "terca"
-    | "quarta"
-    | "quinta"
-    | "sexta"
-    | "sabado"
-    | "domingo";
-
+type DiaKey = "segunda" | "terca" | "quarta" | "quinta" | "sexta" | "sabado" | "domingo";
 const DIAS: { key: DiaKey; label: string }[] = [
     { key: "segunda", label: "segunda" },
     { key: "terca", label: "terça" },
@@ -62,48 +33,25 @@ const DIAS: { key: DiaKey; label: string }[] = [
 export default function EquipesPage() {
     const nav = useNavigate();
 
-    // ===== BOOT / MINHAS EQUIPES =====
     const [bootLoading, setBootLoading] = useState(true);
-    const [bootErr, setBootErr] = useState<string | null>(null);
     const [minhasEquipes, setMinhasEquipes] = useState<EquipeResumo[]>([]);
 
     async function loadMinhasEquipes() {
-        setBootErr(null);
         try {
             const list = await listarMinhasEquipes();
             setMinhasEquipes(list ?? []);
         } catch (e: any) {
-            const status = e?.response?.status;
-            if (status === 401 || status === 403) {
-                nav("/login");
-                return;
-            }
-            setBootErr(explainAxiosError(e));
-        } finally {
-            setBootLoading(false);
-        }
+            if (isAuthError(e)) return;
+            toast.error(explainError(e), "Falha ao carregar equipes");
+        } finally { setBootLoading(false); }
     }
 
-    useEffect(() => {
-        loadMinhasEquipes();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    useEffect(() => { loadMinhasEquipes(); /* eslint-disable-next-line */ }, []);
 
-    // ===== FEEDBACK =====
-    const [ok, setOk] = useState<string | null>(null);
-    const [err, setErr] = useState<string | null>(null);
-
-    // ===== CRIAR EQUIPE =====
     const [create, setCreate] = useState<CriarEquipeBody>({
-        nome: "",
-        cepOuLocal: "",
-        esporte: "VOLEI",
-        statusEquipe: "ABERTA",
-        senhaEquipe: "",
-        diasHorariosPadrao: "", // vai ser preenchido pela agenda
+        nome: "", cepOuLocal: "", esporte: "VOLEI", statusEquipe: "ABERTA", senhaEquipe: "", diasHorariosPadrao: "",
     });
 
-    // ✅ AGENDA (dias + time picker)
     const [agenda, setAgenda] = useState<Record<DiaKey, { enabled: boolean; time: string }>>({
         segunda: { enabled: false, time: "19:00" },
         terca: { enabled: false, time: "19:00" },
@@ -125,103 +73,74 @@ export default function EquipesPage() {
 
     const [creating, setCreating] = useState(false);
     const showSenha = create.statusEquipe === "FECHADA";
+    const [showCreate, setShowCreate] = useState(false);
 
     function setCreateField<K extends keyof CriarEquipeBody>(k: K, v: CriarEquipeBody[K]) {
         setCreate((p) => ({ ...p, [k]: v }));
     }
 
     async function handleCriarEquipe() {
-        setErr(null);
-        setOk(null);
-
         const payload: CriarEquipeBody = {
             nome: normalizeStr(create.nome),
             cepOuLocal: normalizeStr(create.cepOuLocal),
             esporte: create.esporte,
             statusEquipe: create.statusEquipe,
-
-            // ✅ agora vem da agenda
             diasHorariosPadrao: diasHorariosPadraoStr,
         };
-
-        if (!payload.nome) return setErr("Nome da equipe é obrigatório.");
-        if (!payload.cepOuLocal) return setErr("Local é obrigatório.");
-        if (!payload.diasHorariosPadrao)
-            return setErr("Agenda padrão é obrigatória (habilite ao menos 1 dia).");
-
+        if (!payload.nome) return toast.warn("Nome da equipe é obrigatório.");
+        if (!payload.cepOuLocal) return toast.warn("Local é obrigatório.");
+        if (!payload.diasHorariosPadrao) return toast.warn("Habilite ao menos um dia na agenda padrão.");
         if (payload.statusEquipe === "FECHADA") {
             const s = normalizeStr(create.senhaEquipe ?? "");
-            if (!s) return setErr("Equipe FECHADA exige senha.");
+            if (!s) return toast.warn("Equipe fechada precisa de uma senha.");
             payload.senhaEquipe = s;
         }
-
         try {
             setCreating(true);
             const created = await criarEquipe(payload);
-            setOk(`Equipe criada: ${created.nome}`);
+            toast.success(`Equipe "${created.nome}" criada.`);
             await loadMinhasEquipes();
             nav(`/equipes/${created.id}`);
         } catch (e: any) {
-            setErr(explainAxiosError(e));
-        } finally {
-            setCreating(false);
-        }
+            if (isAuthError(e)) return;
+            toast.error(explainError(e), "Falha ao criar equipe");
+        } finally { setCreating(false); }
     }
 
-    // ===== BUSCAR =====
     const [q, setQ] = useState("");
     const [searching, setSearching] = useState(false);
     const [searchedOnce, setSearchedOnce] = useState(false);
-
     const [results, setResults] = useState<EquipeResumo[]>([]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [detalhe, setDetalhe] = useState<EquipeDetalhe | null>(null);
-
     const [joining, setJoining] = useState(false);
     const [senhaEntrada, setSenhaEntrada] = useState("");
 
     async function handleBuscar() {
-        setErr(null);
-        setOk(null);
-
         const qq = normalizeStr(q);
-
         try {
             setSearching(true);
             setSearchedOnce(true);
-
-            // ✅ busca mesmo vazio (se backend aceitar, lista tudo ao abrir)
             const list = await buscarEquipes(qq);
             setResults(list ?? []);
-
-            if (!list?.length) {
-                setSelectedId(null);
-                setDetalhe(null);
-            }
+            if (!list?.length) { setSelectedId(null); setDetalhe(null); }
         } catch (e: any) {
-            setErr(explainAxiosError(e));
-        } finally {
-            setSearching(false);
-        }
+            if (isAuthError(e)) return;
+            toast.error(explainError(e), "Falha na busca");
+        } finally { setSearching(false); }
     }
 
-    // ✅ buscar ao carregar
-    useEffect(() => {
-        handleBuscar();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    useEffect(() => { handleBuscar(); /* eslint-disable-next-line */ }, []);
 
     async function openDetalhe(id: string) {
-        setErr(null);
-        setOk(null);
         setSelectedId(id);
-
         try {
             const d = await getEquipe(id);
             setDetalhe(d);
             setSenhaEntrada("");
         } catch (e: any) {
-            setErr(explainAxiosError(e));
+            if (isAuthError(e)) return;
+            toast.error(explainError(e));
         }
     }
 
@@ -229,141 +148,90 @@ export default function EquipesPage() {
         () => results.find((r) => String(r.id) === String(selectedId)) ?? null,
         [results, selectedId]
     );
-
     const statusEquipe: StatusEquipe | null =
         (detalhe?.statusEquipe ?? (selectedResumo as any)?.statusEquipe) ?? null;
 
     async function handleEntrar() {
         if (!selectedId) return;
-
-        setErr(null);
-        setOk(null);
-
         try {
             setJoining(true);
-
             if (statusEquipe === "ABERTA") {
                 await entrarEquipeAberta(selectedId);
-                setOk("Entrou na equipe.");
+                toast.success("Você entrou na equipe.");
                 nav(`/equipes/${selectedId}`);
                 return;
             }
-
             const s = normalizeStr(senhaEntrada);
-            if (!s) {
-                setErr("Informe a senha da equipe.");
-                return;
-            }
-
+            if (!s) { toast.warn("Informe a senha da equipe."); return; }
             await entrarEquipeFechada(selectedId, s);
-            setOk("Entrou na equipe.");
+            toast.success("Você entrou na equipe.");
             nav(`/equipes/${selectedId}`);
         } catch (e: any) {
-            setErr(explainAxiosError(e));
-        } finally {
-            setJoining(false);
+            if (isAuthError(e)) return;
+            toast.error(explainError(e), "Falha ao entrar");
         }
+        finally { setJoining(false); }
     }
 
-    const temEquipe = minhasEquipes.length > 0;
-
     return (
-        <main className="eqPage">
-            {/* NAVBAR SUPERIOR */}
-            <header className="eqTop">
-                <div className="eqTopInner">
-                    <div className="eqTitleRow">
-                        <div>
-                            <div className="eqBrand">
-                                <img src="/logo-oficial.png" alt="logo" className="eqLogo" />
-                                <span className="eqTitle">Equipes</span>
-                            </div>
-                            <div className="eqSub">
-                                Encontre equipes, crie a sua ou participe de uma existente.
-                            </div>
-                        </div>
+        <div className="x-app">
+            <AppHeader />
 
-                        <div className="eqTopRight">
-                            <button
-                                type="button"
-                                className="eqGhostBtn"
-                                onClick={() => nav("/eu")}
-                            >
-                                Perfil
-                            </button>
+            <main className="x-app-main">
+                <div className="x-app-container">
+                    <div className="x-banner x-reveal">
+                        <img src="/volei-praia.jpg" alt="" />
+                        <div className="x-banner-content">
+                            <div className="x-eyebrow">Seu clube, suas regras</div>
+                            <h1 className="x-banner-title">
+                                Encontre, crie,<br /><em>jogue</em>.
+                            </h1>
+                            <p className="x-banner-sub">
+                                Monte uma equipe nova ou participe de uma existente. Controle de presença,
+                                sorteio nivelado e convite por link — tudo pronto.
+                            </p>
                         </div>
                     </div>
-                </div>
-            </header>
 
-            {/* CONTEÚDO */}
-            <section className="eqContent">
-                <div className="eqWrap">
-                    {bootLoading && <div className="eqMsg">Carregando suas equipes...</div>}
-
-                    {bootErr && (
-                        <div className="eqMsg err">
-                            {bootErr}
-                            <button
-                                type="button"
-                                className="eqBtn"
-                                onClick={loadMinhasEquipes}
-                                style={{ marginTop: 10 }}
-                            >
-                                Tentar novamente
-                            </button>
+                    <div className="x-page-head">
+                        <div>
+                            <h2 className="x-h3">Suas equipes</h2>
+                            <p className="x-page-sub">Participe de rachões ou crie o seu próprio clube.</p>
                         </div>
+                        <button className="x-btn" onClick={() => setShowCreate(v => !v)}>
+                            {showCreate ? "Fechar" : "Nova equipe"} {!showCreate && <span className="x-btn-arr">+</span>}
+                        </button>
+                    </div>
+
+                    {bootLoading && (
+                        <div className="x-loading"><div className="x-spinner" /> Carregando suas equipes...</div>
                     )}
 
-                    {(ok || err) && <div className={`eqMsg ${ok ? "ok" : "err"}`}>{ok ?? err}</div>}
+                    {/* CRIAR equipe (collapsible) */}
+                    {showCreate && (
+                        <div className="x-card pad-lg" style={{ marginBottom: 32 }}>
+                            <div className="x-card-title">Criar equipe</div>
+                            <hr className="x-divider" />
 
-                    {/* MINHAS EQUIPES */}
-                    {temEquipe && (
-                        <section className="eqCard">
-                            <div className="eqCardTitle">Minhas equipes</div>
-
-                            <div className="eqList">
-                                {minhasEquipes.map((r) => (
-                                    <button
-                                        type="button"
-                                        key={r.id}
-                                        className="eqItem"
-                                        onClick={() => nav(`/equipes/${r.id}`)}
-                                    >
-                                        <div className="eqItemTitle">{r.nome}</div>
-                                        <div className="eqItemSub">
-                                            {r.esporte} • {r.statusEquipe} • {r.cepOuLocal}
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {/* GRID */}
-                    <div className="eqGrid">
-                        {/* CRIAR */}
-                        <section className="eqCard">
-                            <div className="eqCardTitle">Criar equipe</div>
-
-                            <div className="eqForm">
-                                <label className="eqLabel">
-                                    <span>Nome</span>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                                <div className="x-field">
+                                    <label>Nome da equipe</label>
                                     <input
-                                        className="eqInput"
+                                        className="x-input"
+                                        placeholder="Rachão do Guilherme"
                                         value={create.nome}
                                         onChange={(e) => setCreateField("nome", e.target.value)}
                                     />
-                                </label>
+                                </div>
 
-                                <label className="eqLabel">
-                                    <span>Local</span>
+                                <div className="x-field">
+                                    <label>Local (CEP ou descrição)</label>
                                     <input
-                                        className="eqInput"
+                                        className="x-input"
+                                        placeholder="00000-000 ou 'Praia do Canto · quadra 3'"
                                         value={maskCepOuLocal(create.cepOuLocal)}
                                         onChange={(e) => {
                                             const v = e.target.value;
-
                                             if (/^\d*$/.test(v)) {
                                                 setCreateField("cepOuLocal", v.replace(/\D/g, "").slice(0, 8));
                                             } else {
@@ -371,98 +239,73 @@ export default function EquipesPage() {
                                             }
                                         }}
                                     />
-                                </label>
+                                </div>
 
-                                <div className="eqRow2">
-                                    <label className="eqLabel">
-                                        <span>Esporte</span>
-                                        <div className="eqSelectWrap">
-                                            <select
-                                                className="eqSelect"
-                                                value={create.esporte}
-                                                onChange={(e) =>
-                                                    setCreateField("esporte", e.target.value as Esporte)
-                                                }
-                                            >
-                                                <option value="VOLEI">VOLEI</option>
-                                                <option value="FUTEVOLEI">FUTEVOLEI</option>
-                                            </select>
-                                            <span className="eqSelectArrow" aria-hidden="true" />
-                                        </div>
-                                    </label>
-
-                                    <label className="eqLabel">
-                                        <span>Status</span>
-                                        <div className="eqSelectWrap">
-                                            <select
-                                                className="eqSelect"
-                                                value={create.statusEquipe}
-                                                onChange={(e) =>
-                                                    setCreateField(
-                                                        "statusEquipe",
-                                                        e.target.value as StatusEquipe
-                                                    )
-                                                }
-                                            >
-                                                <option value="ABERTA">ABERTA</option>
-                                                <option value="FECHADA">FECHADA</option>
-                                            </select>
-                                            <span className="eqSelectArrow" aria-hidden="true" />
-                                        </div>
-                                    </label>
+                                <div className="x-form-grid">
+                                    <div className="x-field">
+                                        <label>Esporte</label>
+                                        <select
+                                            className="x-select"
+                                            value={create.esporte}
+                                            onChange={(e) => setCreateField("esporte", e.target.value as Esporte)}
+                                        >
+                                            <option value="VOLEI">Vôlei</option>
+                                            <option value="FUTEVOLEI">Futevôlei</option>
+                                        </select>
+                                    </div>
+                                    <div className="x-field">
+                                        <label>Status</label>
+                                        <select
+                                            className="x-select"
+                                            value={create.statusEquipe}
+                                            onChange={(e) => setCreateField("statusEquipe", e.target.value as StatusEquipe)}
+                                        >
+                                            <option value="ABERTA">Aberta</option>
+                                            <option value="FECHADA">Fechada (com senha)</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 {showSenha && (
-                                    <label className="eqLabel">
-                                        <span>Senha</span>
+                                    <div className="x-field">
+                                        <label>Senha da equipe</label>
                                         <input
-                                            className="eqInput"
+                                            className="x-input"
+                                            placeholder="Defina uma senha"
                                             value={create.senhaEquipe ?? ""}
                                             onChange={(e) => setCreateField("senhaEquipe", e.target.value)}
                                         />
-                                    </label>
+                                    </div>
                                 )}
 
-                                {/* ✅ AGENDA: dias + time picker (só habilita quando marcar) */}
-                                <div className="eqAgenda">
-                                    <div className="eqAgendaTitle">Agenda padrão</div>
-                                    <div className="eqAgendaHint">Marque os dias e escolha o horário.</div>
-
-                                    <div className="eqAgendaGrid">
+                                <div>
+                                    <label className="x-label" style={{ display: "block", marginBottom: 10 }}>
+                                        Agenda padrão
+                                    </label>
+                                    <div className="x-agenda">
                                         {DIAS.map((d) => {
                                             const item = agenda[d.key];
-
                                             return (
-                                                <div
-                                                    key={d.key}
-                                                    className={`eqAgendaRow ${item.enabled ? "on" : ""}`}
-                                                >
-                                                    <label className="eqAgendaDay">
+                                                <div key={d.key} className={`x-agenda-row ${item.enabled ? "on" : ""}`}>
+                                                    <label className="x-agenda-day">
                                                         <input
                                                             type="checkbox"
                                                             checked={item.enabled}
                                                             onChange={(e) => {
                                                                 const enabled = e.target.checked;
-                                                                setAgenda((prev) => ({
-                                                                    ...prev,
-                                                                    [d.key]: { ...prev[d.key], enabled },
-                                                                }));
+                                                                setAgenda((prev) => ({ ...prev, [d.key]: { ...prev[d.key], enabled } }));
                                                             }}
                                                         />
                                                         <span>{d.label}</span>
                                                     </label>
-
                                                     <input
                                                         type="time"
-                                                        className="eqAgendaTime"
+                                                        className="x-agenda-time"
                                                         value={item.time}
                                                         disabled={!item.enabled}
                                                         onChange={(e) => {
                                                             const time = e.target.value;
-                                                            setAgenda((prev) => ({
-                                                                ...prev,
-                                                                [d.key]: { ...prev[d.key], time },
-                                                            }));
+                                                            setAgenda((prev) => ({ ...prev, [d.key]: { ...prev[d.key], time } }));
                                                         }}
                                                     />
                                                 </div>
@@ -471,113 +314,154 @@ export default function EquipesPage() {
                                     </div>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    className="eqBtn primary"
-                                    onClick={handleCriarEquipe}
-                                    disabled={creating}
-                                >
-                                    {creating ? "Criando..." : "Criar equipe"}
-                                </button>
-                            </div>
-                        </section>
-
-                        {/* BUSCAR */}
-                        <section className="eqCard">
-                            <div className="eqCardTitle">Buscar equipe</div>
-
-                            <div className="eqForm">
-                                <div className="eqSearchRow">
-                                    <input
-                                        className="eqInput"
-                                        placeholder="Nome da equipe..."
-                                        value={q}
-                                        onChange={(e) => setQ(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter") handleBuscar();
-                                        }}
-                                    />
-
-                                    <button
-                                        type="button"
-                                        className="eqBtn"
-                                        onClick={handleBuscar}
-                                        disabled={searching}
-                                    >
-                                        {searching ? "..." : "Buscar"}
+                                <div style={{ display: "flex", gap: 10 }}>
+                                    <button className="x-btn" onClick={handleCriarEquipe} disabled={creating}>
+                                        {creating ? "Criando..." : "Criar equipe"}
                                     </button>
+                                    <button className="x-btn ghost" onClick={() => setShowCreate(false)}>Cancelar</button>
                                 </div>
+                            </div>
+                        </div>
+                    )}
 
-                                <div className="eqList">
-                                    {results.length === 0 ? (
-                                        <div className="eqEmpty">
-                                            {searchedOnce
-                                                ? (q.trim()
-                                                    ? "Equipe não encontrada."
-                                                    : "Nenhuma equipe disponível no momento.")
-                                                : "Carregando..."}
-                                        </div>
-                                    ) : (
-                                        results.map((r) => (
-                                            <button
-                                                type="button"
-                                                key={r.id}
-                                                className={`eqItem ${String(selectedId) === String(r.id) ? "active" : ""
-                                                    }`}
-                                                onClick={() => openDetalhe(String(r.id))}
-                                            >
-                                                <div className="eqItemTitle">{r.nome}</div>
-                                                <div className="eqItemSub">
-                                                    {r.esporte} • {r.statusEquipe} • {r.cepOuLocal}
-                                                </div>
-                                            </button>
-                                        ))
-                                    )}
+                    {/* Minhas equipes */}
+                    {minhasEquipes.length > 0 && (
+                        <div style={{ marginBottom: 40 }}>
+                            <div className="x-page-head" style={{ marginBottom: 20 }}>
+                                <div>
+                                    <h2 className="x-h3">Minhas equipes</h2>
                                 </div>
-
-                                {selectedId && (
-                                    <div className="eqDetails">
-                                        <div className="eqDetailsTitle">Detalhes</div>
-
-                                        <div className="eqDetailsRow">
-                                            <span>Status</span>
-                                            <strong>{statusEquipe ?? "—"}</strong>
+                                <span className="x-pill">{minhasEquipes.length}</span>
+                            </div>
+                            <div className="x-list">
+                                {minhasEquipes.map((r) => (
+                                    <button key={r.id} className="x-list-item" onClick={() => nav(`/equipes/${r.id}`)}>
+                                        <div className="x-avatar sm">{r.nome.charAt(0).toUpperCase()}</div>
+                                        <div className="x-list-item-main">
+                                            <div className="x-list-item-title">{r.nome}</div>
+                                            <div className="x-list-item-sub">
+                                                <span>{r.esporte}</span>
+                                                <span className="sep">·</span>
+                                                <span>{r.statusEquipe}</span>
+                                                <span className="sep">·</span>
+                                                <span>{r.cepOuLocal}</span>
+                                            </div>
                                         </div>
+                                        <div className="x-list-item-right">
+                                            <span className="x-chev">→</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-                                        <button
-                                            type="button"
-                                            className="eqBtn"
-                                            onClick={() => nav(`/equipes/${selectedId}`)}
-                                        >
-                                            Ver detalhes
-                                        </button>
+                    {/* Buscar */}
+                    <div>
+                        <div className="x-page-head" style={{ marginBottom: 20 }}>
+                            <div>
+                                <h2 className="x-h3">Descobrir equipes</h2>
+                                <p className="x-page-sub">Encontre equipes abertas para participar.</p>
+                            </div>
+                            <span className="x-pill">{results.length}</span>
+                        </div>
 
-                                        {statusEquipe === "FECHADA" && (
-                                            <label className="eqLabel">
-                                                <span>Senha</span>
-                                                <input
-                                                    className="eqInput"
-                                                    value={senhaEntrada}
-                                                    onChange={(e) => setSenhaEntrada(e.target.value)}
-                                                />
-                                            </label>
-                                        )}
+                        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+                            <input
+                                className="x-input"
+                                placeholder="Buscar por nome..."
+                                value={q}
+                                onChange={(e) => setQ(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleBuscar()}
+                                style={{ flex: 1 }}
+                            />
+                            <button className="x-btn" onClick={handleBuscar} disabled={searching}>
+                                {searching ? "..." : "Buscar"}
+                            </button>
+                        </div>
 
-                                        <button
-                                            type="button"
-                                            className="eqBtn primary"
-                                            onClick={handleEntrar}
-                                            disabled={joining}
-                                        >
-                                            {joining ? "Entrando..." : "Entrar"}
-                                        </button>
-                                    </div>
+                        {results.length === 0 ? (
+                            <div className="x-empty">
+                                <div className="x-empty-icon">
+                                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                        <circle cx="11" cy="11" r="8" />
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                    </svg>
+                                </div>
+                                <h3 className="x-empty-title">Nada encontrado</h3>
+                                <p className="x-empty-text">
+                                    {searchedOnce
+                                        ? (q.trim()
+                                            ? `Nenhuma equipe com o termo "${q}".`
+                                            : "Nenhuma equipe pública disponível no momento. Que tal criar a sua?")
+                                        : "Carregando..."}
+                                </p>
+                                {!q.trim() && searchedOnce && (
+                                    <button className="x-btn sm" onClick={() => setShowCreate(true)}>
+                                        Criar equipe <span className="x-btn-arr">+</span>
+                                    </button>
                                 )}
                             </div>
-                        </section>
+                        ) : (
+                            <div className="x-list">
+                                {results.map((r) => (
+                                    <button
+                                        key={r.id}
+                                        className="x-list-item"
+                                        onClick={() => openDetalhe(String(r.id))}
+                                        style={String(selectedId) === String(r.id) ? { borderColor: "var(--x-accent)" } : undefined}
+                                    >
+                                        <div className="x-avatar sm teal">{r.nome.charAt(0).toUpperCase()}</div>
+                                        <div className="x-list-item-main">
+                                            <div className="x-list-item-title">{r.nome}</div>
+                                            <div className="x-list-item-sub">
+                                                <span>{r.esporte}</span>
+                                                <span className="sep">·</span>
+                                                <span>{r.statusEquipe}</span>
+                                                <span className="sep">·</span>
+                                                <span>{r.cepOuLocal}</span>
+                                            </div>
+                                        </div>
+                                        <div className="x-list-item-right">
+                                            <span className="x-chev">→</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+
+                        {selectedId && (
+                            <div className="x-card" style={{ marginTop: 20 }}>
+                                <div className="x-card-title">
+                                    Entrar na equipe
+                                    <span className="x-pill">{statusEquipe ?? "—"}</span>
+                                </div>
+                                <hr className="x-divider" />
+
+                                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                                    <button className="x-btn ghost" onClick={() => nav(`/equipes/${selectedId}`)}>
+                                        Ver detalhes
+                                    </button>
+
+                                    {statusEquipe === "FECHADA" && (
+                                        <input
+                                            className="x-input"
+                                            placeholder="Senha da equipe"
+                                            value={senhaEntrada}
+                                            onChange={(e) => setSenhaEntrada(e.target.value)}
+                                            style={{ flex: 1, minWidth: 200 }}
+                                        />
+                                    )}
+
+                                    <button className="x-btn" onClick={handleEntrar} disabled={joining}>
+                                        {joining ? "Entrando..." : "Entrar"} <span className="x-btn-arr">→</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
-            </section>
-        </main>
+            </main>
+        </div>
     );
 }

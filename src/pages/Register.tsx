@@ -1,26 +1,39 @@
-import { useState } from "react";
-import { cadastrar } from "../services/auth";
+import { useEffect, useState } from "react";
+import { cadastrar, login } from "../services/auth";
 import { useNavigate } from "react-router-dom";
+import { isLoggedIn, setToken } from "../utils/auth";
+import { toast } from "../components/Toast";
+import { explainError } from "../utils/errors";
+
+function EyeIcon() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" stroke="currentColor" strokeWidth="1.6" />
+            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" strokeWidth="1.6" />
+        </svg>
+    );
+}
 
 function maskTelefone(v: string) {
     const nums = v.replace(/\D/g, "").slice(0, 11);
-
     if (nums.length <= 2) return nums;
     if (nums.length <= 6) return `(${nums.slice(0, 2)}) ${nums.slice(2)}`;
-    if (nums.length <= 10) {
-        return `(${nums.slice(0, 2)}) ${nums.slice(2, 6)}-${nums.slice(6)}`;
-    }
-
+    if (nums.length <= 10) return `(${nums.slice(0, 2)}) ${nums.slice(2, 6)}-${nums.slice(6)}`;
     return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7)}`;
 }
 
 function maskCEP(v: string) {
     const nums = v.replace(/\D/g, "").slice(0, 8);
-
     if (nums.length <= 5) return nums;
-
     return `${nums.slice(0, 5)}-${nums.slice(5)}`;
 }
+
+type Errors = {
+    nome?: string;
+    telefone?: string;
+    cep?: string;
+    senha?: string;
+};
 
 export default function Register() {
     const nav = useNavigate();
@@ -32,34 +45,68 @@ export default function Register() {
     const [senha, setSenha] = useState("");
     const [showPass, setShowPass] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState<Errors>({});
 
-    async function handleRegister() {
-        if (!nome || !telefone || !cep || !senha) {
-            alert("Preencha todos os campos");
-            return;
-        }
+    useEffect(() => {
+        if (isLoggedIn()) nav("/eu", { replace: true });
+    }, [nav]);
 
-        if (senha.length < 8) {
-            alert("Senha deve ter no mínimo 8 caracteres");
+    function validate(): Errors {
+        const e: Errors = {};
+        if (!nome.trim()) e.nome = "Informe seu nome completo.";
+        else if (nome.trim().split(/\s+/).length < 2) e.nome = "Digite nome e sobrenome.";
+
+        if (!telefone) e.telefone = "Informe seu telefone.";
+        else if (telefone.length < 10) e.telefone = "Telefone incompleto.";
+
+        if (!cep) e.cep = "Informe seu CEP.";
+        else if (cep.length !== 8) e.cep = "CEP deve ter 8 dígitos.";
+
+        if (!senha) e.senha = "Crie uma senha.";
+        else if (senha.length < 8) e.senha = "Mínimo de 8 caracteres.";
+        return e;
+    }
+
+    async function handleRegister(ev?: React.FormEvent) {
+        ev?.preventDefault();
+        const e = validate();
+        setErrors(e);
+        if (Object.keys(e).length > 0) {
+            toast.warn("Verifique os campos do formulário.", "Dados inválidos");
             return;
         }
 
         try {
             setLoading(true);
+            const data = await cadastrar({ nome: nome.trim(), telefone, cep, senha });
 
-            const data = await cadastrar({
-                nome,
-                telefone,
-                cep,
-                senha,
-            });
+            // se o cadastro já retornar token, pula o modal e vai direto pro app
+            const tokenDireto = data?.token || data?.accessToken || data?.jwt;
+            if (tokenDireto) {
+                setToken(tokenDireto);
+                toast.success("Bem-vindo ao clube!", "Conta criada");
+                nav("/eu", { replace: true });
+                return;
+            }
 
-            console.log("CADASTRO OK:", data);
+            // tenta login automático logo após o cadastro
+            try {
+                const loginRes = await login({ telefone, senha });
+                const token = loginRes?.token || loginRes?.accessToken || loginRes?.jwt;
+                if (token) {
+                    setToken(token);
+                    toast.success("Bem-vindo ao clube!", "Conta criada");
+                    nav("/eu", { replace: true });
+                    return;
+                }
+            } catch {
+                // se falhar, só mostra o modal de sucesso manual
+            }
 
+            toast.success("Conta criada com sucesso.", "Pronto!");
             setSuccessOpen(true);
         } catch (err: any) {
-            console.error("Erro cadastro:", err);
-            alert("Erro ao cadastrar");
+            toast.error(explainError(err), "Falha no cadastro");
         } finally {
             setLoading(false);
         }
@@ -71,167 +118,150 @@ export default function Register() {
     }
 
     return (
-        <div className="screen">
-            <div className="auth-card">
-
-                {/* HEADER */}
-                <div className="auth-header">
-                    <div className="auth-icon">
-                        <img src="/logo-mao.png" className="auth-logo" />
-                    </div>
-                    <div className="auth-title">Criar conta no ClubeDoFut</div>
-                </div>
-
-                {/* TABS */}
-                <div className="tabs">
-                    <div className="tab" onClick={() => nav("/login")}>Login</div>
-                    <div className="tab active">Cadastro</div>
-                </div>
-
-                <div className="section-label">Seja bem-vindo!</div>
-
-                {/* NOME */}
-                <div className="field-wrap">
-                    <div className="field-caption">Nome completo</div>
-                    <input
-                        className="field"
-                        value={nome}
-                        onChange={(e) => setNome(e.target.value)}
-                    />
-                </div>
-
-                {/* TELEFONE */}
-                <div className="field-wrap">
-                    <div className="field-caption">Telefone</div>
-                    <input
-                        className="field"
-                        value={maskTelefone(telefone)}
-                        onChange={(e) => {
-                            const raw = e.target.value.replace(/\D/g, "");
-                            setTelefone(raw);
-                        }}
-                    />
-                </div>
-
-                {/* CEP */}
-                <div className="field-wrap">
-                    <div className="field-caption">CEP</div>
-                    <input
-                        className="field"
-                        value={maskCEP(cep)}
-                        onChange={(e) => {
-                            const raw = e.target.value.replace(/\D/g, "");
-                            setCep(raw);
-                        }}
-                    />
-                </div>
-
-                {/* SENHA */}
-                <div className="field-wrap">
-                    <div className="field-caption">Senha</div>
-                    <input
-                        className="field has-eye"
-                        type={showPass ? "text" : "password"}
-                        value={senha}
-                        onChange={(e) => setSenha(e.target.value)}
-                    />
-
-                    <button
-                        type="button"
-                        className="eye"
-                        onClick={() => setShowPass((v) => !v)}
-                    >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                            <path
-                                d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"
-                                stroke="white"
-                                strokeWidth="1.6"
-                            />
-                            <path
-                                d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
-                                stroke="white"
-                                strokeWidth="1.6"
-                            />
-                        </svg>
-                    </button>
-                </div>
-
-                <div className="helper">
-                    Senha deve conter no mínimo 8 caracteres.
-                </div>
-
-                {/* BOTÃO */}
-                <button className="btn" onClick={handleRegister} disabled={loading}>
-                    <span className="btn-icon">
-                        <svg
-                            className="btn-icon-svg"
-                            viewBox="0 0 27 27"
-                            fill="none"
-                        >
-                            <path
-                                d="M13.1912 26.3093V24.1168H24.1168V2.19244H13.1912V0H24.1168C24.7015 0 25.2131 0.219244 25.6515 0.657732C26.09 1.09622 26.3093 1.60779 26.3093 2.19244V24.1168C26.3093 24.7015 26.09 25.2131 25.6515 25.6515C25.2131 26.09 24.7015 26.3093 24.1168 26.3093H13.1912ZM11.1814 19.5493L9.61019 17.978L13.3373 14.2509H0V12.0584H13.2643L9.53711 8.33127L11.1084 6.76002L17.5395 13.1912L11.1814 19.5493Z"
-                                fill="white"
-                            />
-                        </svg>
-                    </span>
-                    {loading ? "Criando..." : "Cadastrar"}
+        <div className="x-auth">
+            <aside className="x-auth-cover">
+                <button className="x-brand" onClick={() => nav("/")}>
+                    <span className="x-brand-mark"><img src="/icon-bola.png" alt="" /></span>
+                    <span className="x-brand-name">ClubeDoFut</span>
                 </button>
 
-                <div className="link" onClick={() => nav("/login")}>
-                    Já tem conta? Fazer login
-                </div>
+                <h1 className="x-auth-quote">
+                    Entre para o clube.<br />
+                    É <em>grátis</em> —<br />
+                    sempre será.
+                </h1>
 
-                <div className="footer flex items-center gap-2">
-                    <img src="/icon-bola.png" className="footer-icon" />
-                    4.1.23#2
+                <div className="x-auth-meta">
+                    <span className="d" /> Cadastro novo · v4.1.23
                 </div>
+            </aside>
 
-            </div>
+            <section className="x-auth-panel">
+                <form className="x-auth-inner" onSubmit={handleRegister} noValidate>
+                    <div className="x-eyebrow">Criar conta</div>
+                    <h2 className="x-auth-title">
+                        Seja bem-<br /><em>vindo</em>.
+                    </h2>
+                    <p className="x-auth-sub">
+                        Um minuto para criar sua conta e começar a organizar partidas.
+                    </p>
+
+                    <div className="x-auth-tabs">
+                        <button type="button" onClick={() => nav("/login")}>Entrar</button>
+                        <button type="button" className="active">Criar conta</button>
+                    </div>
+
+                    <div className="x-auth-fields">
+                        <div className="x-field">
+                            <label>Nome completo</label>
+                            <input
+                                className={`x-input ${errors.nome ? "has-err" : ""}`}
+                                placeholder="Seu nome"
+                                autoComplete="name"
+                                value={nome}
+                                onChange={(e) => {
+                                    setNome(e.target.value);
+                                    if (errors.nome) setErrors((p) => ({ ...p, nome: undefined }));
+                                }}
+                            />
+                            {errors.nome && <div className="x-field-error">⚠ {errors.nome}</div>}
+                        </div>
+
+                        <div className="x-field">
+                            <label>Telefone</label>
+                            <input
+                                className={`x-input ${errors.telefone ? "has-err" : ""}`}
+                                placeholder="(00) 00000-0000"
+                                inputMode="tel"
+                                autoComplete="tel"
+                                value={maskTelefone(telefone)}
+                                onChange={(e) => {
+                                    setTelefone(e.target.value.replace(/\D/g, ""));
+                                    if (errors.telefone) setErrors((p) => ({ ...p, telefone: undefined }));
+                                }}
+                            />
+                            {errors.telefone && <div className="x-field-error">⚠ {errors.telefone}</div>}
+                        </div>
+
+                        <div className="x-field">
+                            <label>CEP</label>
+                            <input
+                                className={`x-input ${errors.cep ? "has-err" : ""}`}
+                                placeholder="00000-000"
+                                inputMode="numeric"
+                                autoComplete="postal-code"
+                                value={maskCEP(cep)}
+                                onChange={(e) => {
+                                    setCep(e.target.value.replace(/\D/g, ""));
+                                    if (errors.cep) setErrors((p) => ({ ...p, cep: undefined }));
+                                }}
+                            />
+                            {errors.cep && <div className="x-field-error">⚠ {errors.cep}</div>}
+                        </div>
+
+                        <div className="x-field">
+                            <label>Senha</label>
+                            <div className="x-input-wrap">
+                                <input
+                                    className={`x-input ${errors.senha ? "has-err" : ""}`}
+                                    type={showPass ? "text" : "password"}
+                                    placeholder="No mínimo 8 caracteres"
+                                    autoComplete="new-password"
+                                    value={senha}
+                                    onChange={(e) => {
+                                        setSenha(e.target.value);
+                                        if (errors.senha) setErrors((p) => ({ ...p, senha: undefined }));
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    className="x-input-icon"
+                                    onClick={() => setShowPass(v => !v)}
+                                >
+                                    <EyeIcon />
+                                </button>
+                            </div>
+                            {errors.senha && <div className="x-field-error">⚠ {errors.senha}</div>}
+                        </div>
+                    </div>
+
+                    <div className="x-auth-help">
+                        Ao criar conta você concorda com os termos de uso.
+                    </div>
+
+                    <button type="submit" className="x-btn block lg" disabled={loading}>
+                        {loading ? "Criando..." : "Criar minha conta"} <span className="x-btn-arr">→</span>
+                    </button>
+
+                    <button type="button" className="x-auth-alt" onClick={() => nav("/login")}>
+                        Já tem conta? <u>Fazer login</u>
+                    </button>
+
+                    <div className="x-auth-foot">v4.1.23 · #2</div>
+                </form>
+            </section>
+
             {successOpen && (
-                <div
-                    className="successModalOverlay"
-                    role="dialog"
-                    aria-modal="true"
-                    onClick={() => setSuccessOpen(false)}
-                >
-                    <div className="successModal" onClick={(e) => e.stopPropagation()}>
-                        <div className="successBrand">
-                            <img src="/icon-bola.png" className="successBrandIcon" alt="" />
-                            <div className="successBrandName">ClubeDoFut</div>
-                        </div>
-
-                        <div className="successBallWrap" aria-hidden="true">
-                            <img src="/icon-bola.png" className="successBall" alt="" />
-                        </div>
-
-                        <div className="successHeadline">
-                            Jogar o Fut da semana <br />
-                            ficou ainda mais fácil.
-                        </div>
-
-                        <ul className="successBullets">
-                            <li>Crie partidas e equipes.</li>
-                            <li>Entre em partidas ou equipes disponíveis.</li>
-                            <li>
-                                Jogue em partidas com outros. <br />
-                                Entre em partidas (ou como mensalista).
-                            </li>
-                            <li>Avalie Partidas, Equipes e Jogadores.</li>
-                            <li>E muito mais.</li>
+                <div className="x-modal-overlay" onClick={() => setSuccessOpen(false)}>
+                    <div className="x-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="x-eyebrow">Bem-vindo ao clube</div>
+                        <h3 className="x-modal-title" style={{ marginTop: 12 }}>
+                            Jogar o fut da semana<br />ficou <em>ainda</em> mais fácil.
+                        </h3>
+                        <ul className="x-modal-list">
+                            <li>Crie partidas e equipes</li>
+                            <li>Entre em partidas ou equipes disponíveis</li>
+                            <li>Jogue como mensalista ou avulso</li>
+                            <li>Avalie partidas, equipes e jogadores</li>
                         </ul>
-
-                        <div className="successBottom">
-                            <div className="successBottomLeft" onClick={goToLogin}>Bora?</div>
-
-                            <button className="successCta" onClick={goToLogin}>
-                                Dale!
+                        <div className="x-modal-actions">
+                            <button className="x-btn block lg" onClick={goToLogin}>
+                                Entrar agora <span className="x-btn-arr">→</span>
                             </button>
                         </div>
                     </div>
                 </div>
             )}
         </div>
-
-
     );
 }

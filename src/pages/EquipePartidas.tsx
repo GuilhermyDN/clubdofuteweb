@@ -1,51 +1,31 @@
-// src/pages/EquipePartidasPage.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
-import "../styles/EquipePartidasPage.css";
-
 import { getEquipe } from "../services/equipe";
 import {
-    criarPartidaEquipe,
-    listarPartidasEquipe,
-    type CriarPartidaBody,
-    type PartidaResumo,
-    type PoliticaInscricao,
+    criarPartidaEquipe, listarPartidasEquipe,
+    type CriarPartidaBody, type PartidaResumo, type PoliticaInscricao,
 } from "../services/equipePartidas";
 import { api } from "../services/api";
+import AppHeader from "../components/AppHeader";
+import CountUp from "../components/CountUp";
+import { toast } from "../components/Toast";
+import { explainError, isAuthError } from "../utils/errors";
 
-type EuResponse = {
-    id: number;
-    nome?: string;
-};
+type EuResponse = { id: number; nome?: string; };
 
 function fmtDataHora(iso: string) {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
     return d.toLocaleString("pt-BR");
 }
-
 function toLocalInputValue(d: Date) {
     const pad = (n: number) => String(n).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    const MM = pad(d.getMonth() + 1);
-    const dd = pad(d.getDate());
-    const hh = pad(d.getHours());
-    const mm = pad(d.getMinutes());
-    return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-
 function toIsoFromDatetimeLocal(v: string) {
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return null;
     return d.toISOString();
-}
-
-function explainAxiosError(e: any) {
-    const status = e?.response?.status;
-    const data = e?.response?.data;
-    if (status) return `Erro (HTTP ${status}): ${JSON.stringify(data)}`;
-    return "Falha de rede / CORS / backend fora.";
 }
 
 export default function EquipePartidasPage() {
@@ -53,11 +33,9 @@ export default function EquipePartidasPage() {
     const nav = useNavigate();
 
     const [loading, setLoading] = useState(true);
-    const [err, setErr] = useState<string | null>(null);
-    const [ok, setOk] = useState<string | null>(null);
-
     const [partidas, setPartidas] = useState<PartidaResumo[]>([]);
     const [souAdmin, setSouAdmin] = useState(false);
+    const [showCreate, setShowCreate] = useState(false);
 
     const [creating, setCreating] = useState(false);
     const [form, setForm] = useState<CriarPartidaBody>(() => ({
@@ -67,7 +45,6 @@ export default function EquipePartidasPage() {
         limiteParticipantes: undefined,
     }));
 
-    // ===== paginação =====
     const PAGE_SIZE = 10;
     const [page, setPage] = useState(1);
 
@@ -78,62 +55,31 @@ export default function EquipePartidasPage() {
     }, [form.dataHora]);
 
     async function loadAll() {
-        if (!equipeId) {
-            setErr("ID da equipe ausente.");
-            setLoading(false);
-            return;
-        }
-
-        setErr(null);
-        setOk(null);
+        if (!equipeId) { setLoading(false); return; }
         setLoading(true);
-
         try {
-            // 1) meu usuario
             const euRes = await api.get<EuResponse>("/eu");
             const meuId = euRes.data?.id;
-
-            // 2) equipe p/ descobrir papel
             const equipe = await getEquipe(equipeId);
-
-            const isAdmin =
-                !!meuId &&
-                (equipe.membros ?? []).some((m) => {
-                    const papel = String((m as any).papel ?? "").toUpperCase();
-                    const isAdminRole = papel === "ADMIN" || papel === "ADMINISTRADOR";
-                    return m.usuarioId === meuId && m.ativo && isAdminRole;
-                });
-
+            const isAdmin = !!meuId && (equipe.membros ?? []).some((m) => {
+                const papel = String((m as any).papel ?? "").toUpperCase();
+                const isAdminRole = papel === "ADMIN" || papel === "ADMINISTRADOR";
+                return m.usuarioId === meuId && m.ativo && isAdminRole;
+            });
             setSouAdmin(isAdmin);
-
-            // 3) partidas
             const list = await listarPartidasEquipe(equipeId);
             setPartidas(list ?? []);
-
-            // se a lista mudou e a página ficou inválida, conserta
             setPage((p) => Math.max(1, p));
         } catch (e: any) {
-            const status = e?.response?.status;
-            if (status === 401 || status === 403) {
-                nav("/login");
-                return;
-            }
-            setErr(explainAxiosError(e));
-        } finally {
-            setLoading(false);
-        }
+            if (isAuthError(e)) return;
+            toast.error(explainError(e), "Falha ao carregar partidas");
+        } finally { setLoading(false); }
     }
 
-    useEffect(() => {
-        loadAll();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [equipeId]);
+    useEffect(() => { loadAll(); /* eslint-disable-next-line */ }, [equipeId]);
 
     const totalPartidas = partidas.length;
-
-    const totalPages = useMemo(() => {
-        return Math.max(1, Math.ceil(totalPartidas / PAGE_SIZE));
-    }, [totalPartidas]);
+    const totalPages = useMemo(() => Math.max(1, Math.ceil(totalPartidas / PAGE_SIZE)), [totalPartidas]);
 
     useEffect(() => {
         if (page > totalPages) setPage(totalPages);
@@ -142,14 +88,10 @@ export default function EquipePartidasPage() {
 
     const pageStart = (page - 1) * PAGE_SIZE;
     const pageEnd = Math.min(pageStart + PAGE_SIZE, totalPartidas);
+    const partidasPaginadas = useMemo(() => partidas.slice(pageStart, pageEnd), [partidas, pageStart, pageEnd]);
 
-    const partidasPaginadas = useMemo(() => {
-        return partidas.slice(pageStart, pageEnd);
-    }, [partidas, pageStart, pageEnd]);
-
-    const totalConfirmados = useMemo(() => {
-        return (partidas ?? []).reduce((acc, p) => acc + Number((p as any).totalConfirmados ?? 0), 0);
-    }, [partidas]);
+    const totalConfirmados = useMemo(() =>
+        (partidas ?? []).reduce((acc, p) => acc + Number((p as any).totalConfirmados ?? 0), 0), [partidas]);
 
     const proximas = useMemo(() => {
         const now = Date.now();
@@ -161,20 +103,9 @@ export default function EquipePartidasPage() {
 
     async function onCriarPartida() {
         if (!equipeId) return;
-
-        setErr(null);
-        setOk(null);
-
-        if (!souAdmin) {
-            setErr("Você não é ADMIN desta equipe (segundo o backend).");
-            return;
-        }
-
+        if (!souAdmin) { toast.warn("Você não é administrador desta equipe."); return; }
         const iso = toIsoFromDatetimeLocal(dataHoraLocal);
-        if (!iso) {
-            setErr("Data/Hora inválida.");
-            return;
-        }
+        if (!iso) { toast.warn("Data/Hora inválida."); return; }
 
         const body: CriarPartidaBody = {
             dataHora: iso,
@@ -188,332 +119,246 @@ export default function EquipePartidasPage() {
                     : Number(form.limiteParticipantes),
         };
 
-        if (!body.politicaInscricao) return setErr("Política é obrigatória.");
-        if (!body.jogadoresPorTime || body.jogadoresPorTime <= 0) return setErr("Jogadores por time deve ser > 0.");
-        if (body.limiteParticipantes !== undefined && body.limiteParticipantes < 0) return setErr("Limite não pode ser negativo.");
+        if (!body.politicaInscricao) return toast.warn("Política de inscrição é obrigatória.");
+        if (!body.jogadoresPorTime || body.jogadoresPorTime <= 0) return toast.warn("Jogadores por time deve ser maior que 0.");
+        if (body.limiteParticipantes !== undefined && body.limiteParticipantes < 0) return toast.warn("Limite não pode ser negativo.");
 
         try {
             setCreating(true);
             await criarPartidaEquipe(equipeId, body);
-            setOk("Partida criada.");
+            toast.success("Partida criada com sucesso.");
+            setShowCreate(false);
             await loadAll();
         } catch (e: any) {
-            setErr(explainAxiosError(e));
-        } finally {
-            setCreating(false);
-        }
+            if (isAuthError(e)) return;
+            toast.error(explainError(e), "Falha ao criar partida");
+        } finally { setCreating(false); }
     }
 
     if (loading) {
         return (
-            <div className="pd2Shell">
-                <div className="pd2Card pd2Center">
-                    <div className="pd2Spinner" />
-                    <div className="pd2Muted">Carregando partidas...</div>
-                </div>
+            <div className="x-app">
+                <AppHeader />
+                <main className="x-app-main">
+                    <div className="x-loading"><div className="x-spinner" /> Carregando partidas...</div>
+                </main>
             </div>
         );
     }
 
     return (
-        <div className="pd2Shell">
-            <div className="pd2Card">
-                {/* TOP */}
-                <div className="pd2Top">
-                    <button className="pd2IconBtn" onClick={() => nav(-1)} type="button" aria-label="Voltar">
-                        ←
-                    </button>
+        <div className="x-app">
+            <AppHeader />
 
-                    <div className="pd2Brand">
-                        <img className="pd2Logo" src="/logo-oficial.png" alt="Logo" />
-                        <div className="pd2TitleWrap">
-                            <div className="pd2Title">Partidas da equipe</div>
-                            <div className="pd2Muted">Criação, métricas e histórico</div>
-                        </div>
-                    </div>
-
-                    <div className="pd2TopRight">
-                        <button className="pd2IconBtn" type="button" onClick={loadAll} aria-label="Recarregar">
-                            ↻
-                        </button>
-                        <button className="pd2BtnSmall pd2BtnGhost" type="button" onClick={() => nav(`/equipes/${equipeId}`)}>
-                            Equipe
-                        </button>
-                    </div>
-                </div>
-
-                {/* HERO */}
-                <div className="pd2Hero">
-                    <div className="pd2HeroBg" />
-                    <img className="pd2HeroImg" src="/quadra-areia.jpg" alt="Quadra" />
-                    <div className="pd2HeroOverlay" />
-
-                    <div className="pd2HeroContent">
-                        <div className="pd2HeroLeft">
-                            <div className="pd2HeroTitle">Central de Partidas</div>
-                            <div className="pd2HeroSub">
-                                {souAdmin ? (
-                                    <span className="pd2Pill pd2PillAdmin">Você é admin</span>
-                                ) : (
-                                    <span className="pd2Pill pd2PillSoft">Você é membro</span>
-                                )}
-                                <span className="pd2Pill">Equipe #{String(equipeId)}</span>
-                            </div>
-                        </div>
-
-                        <div className="pd2HeroRight">
-                            <div className="pd2Stat">
-                                <div className="pd2StatLabel">Total de partidas</div>
-                                <div className="pd2StatValue">{totalPartidas}</div>
-                            </div>
-
-                            <div className="pd2Stat">
-                                <div className="pd2StatLabel">Próximas</div>
-                                <div className="pd2StatValue">{proximas}</div>
-                            </div>
-
-                            <div className="pd2Stat">
-                                <div className="pd2StatLabel">Confirmados (somatório)</div>
-                                <div className="pd2StatValue">{totalConfirmados}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* MSG */}
-                {(ok || err) && (
-                    <div className={`pd2Alert ${ok ? "pd2AlertOk" : "pd2AlertErr"}`}>
+            <div className="x-phero">
+                <div className="x-phero-inner">
+                    <button className="x-phero-back" onClick={() => nav(-1)}>← Voltar</button>
+                    <div className="x-phero-grid">
                         <div>
-                            <div className="pd2AlertTitle">{ok ? "Sucesso" : "Erro"}</div>
-                            <div className="pd2AlertText">{ok ?? err}</div>
-                        </div>
-                        <button className="pd2AlertClose" onClick={() => (ok ? setOk(null) : setErr(null))} aria-label="Fechar">
-                            ×
-                        </button>
-                    </div>
-                )}
-
-                {/* CRIAR */}
-                <div className="pd2SectionHead">
-                    <div>
-                        <div className="pd2SectionTitle">Criar partida</div>
-                        <div className="pd2Muted">Defina data, política e tamanho de times.</div>
-                    </div>
-
-                    <div className="pd2SectionRight">
-                        <span className="pd2CountBadge">{souAdmin ? "Admin" : "Somente leitura"}</span>
-                    </div>
-                </div>
-
-                {!souAdmin ? (
-                    <div className="pd2Note">
-                        Apenas administradores podem criar partidas.
-                    </div>
-                ) : (
-                    <div className={`pd2Form ${creating ? "isBusy" : ""}`}>
-                        <div className="pd2FormGrid">
-                            <div className="pd2FieldCard">
-                                <div className="pd2FieldLabel">Data/Hora</div>
-                                <input
-                                    className="pd2Field"
-                                    type="datetime-local"
-                                    value={dataHoraLocal}
-                                    onChange={(e) => {
-                                        const iso2 = toIsoFromDatetimeLocal(e.target.value);
-                                        if (!iso2) return;
-                                        setForm((p) => ({ ...p, dataHora: iso2 }));
-                                    }}
-                                />
-                                <div className="pd2FieldHelp">Horário local do seu navegador.</div>
+                            <h1 className="x-phero-title">Partidas da equipe</h1>
+                            <div className="x-meta" style={{ marginBottom: 18 }}>
+                                Histórico, criação e métricas da equipe #{equipeId}
                             </div>
-
-                            <div className="pd2FieldCard">
-                                <div className="pd2FieldLabel">Política</div>
-                                <select
-                                    className="pd2Field"
-                                    value={form.politicaInscricao}
-                                    onChange={(e) =>
-                                        setForm((p) => ({
-                                            ...p,
-                                            politicaInscricao: e.target.value as any,
-                                        }))
-                                    }
-                                >
-                                    <option value="SOMENTE_MEMBROS">SOMENTE_MEMBROS</option>
-                                    <option value="AVULSOS_ABERTOS">AVULSOS_ABERTOS</option>
-                                </select>
-                                <div className="pd2FieldHelp">Quem pode entrar nessa partida.</div>
-                            </div>
-
-                            <div className="pd2FieldCard">
-                                <div className="pd2FieldLabel">Jogadores por time</div>
-                                <input
-                                    className="pd2Field"
-                                    type="number"
-                                    min={1}
-                                    value={String(form.jogadoresPorTime)}
-                                    onChange={(e) =>
-                                        setForm((p) => ({
-                                            ...p,
-                                            jogadoresPorTime: Number(e.target.value),
-                                        }))
-                                    }
-                                />
-                                <div className="pd2FieldHelp">Ex.: 4 significa 4x4.</div>
-                            </div>
-
-                            <div className="pd2FieldCard">
-                                <div className="pd2FieldLabel">
-                                    Limite participantes <span className="pd2Hint">(opcional)</span>
-                                </div>
-                                <input
-                                    className="pd2Field"
-                                    type="number"
-                                    min={0}
-                                    value={form.limiteParticipantes === undefined ? "" : String(form.limiteParticipantes)}
-                                    onChange={(e) => {
-                                        const v = e.target.value;
-                                        setForm((p) => ({
-                                            ...p,
-                                            limiteParticipantes: v === "" ? undefined : Number(v),
-                                        }));
-                                    }}
-                                    placeholder="vazio = sem limite"
-                                />
+                            <div className="x-phero-meta">
+                                {souAdmin ? (
+                                    <span className="x-pill accent">Você é admin</span>
+                                ) : (
+                                    <span className="x-pill">Membro</span>
+                                )}
                             </div>
                         </div>
-
-                        <div className="pd2Actions">
-                            <button className="pd2Btn primary" type="button" onClick={onCriarPartida} disabled={creating}>
-                                {creating ? "Criando..." : "Criar partida"}
-                            </button>
-
-                            <button className="pd2Btn pd2BtnGhost" type="button" onClick={loadAll} disabled={creating}>
-                                Recarregar
-                            </button>
-                        </div>
-
-                        {creating && <div className="pd2FormBusy" aria-hidden="true" />}
-                    </div>
-                )}
-
-                {/* LISTA */}
-                <div className="pd2SectionHead">
-                    <div>
-                        <div className="pd2SectionTitle">Partidas</div>
-                        <div className="pd2Muted">Clique numa partida para abrir os detalhes.</div>
-                    </div>
-
-                    <div className="pd2SectionRight">
-                        <span className="pd2CountBadge">{totalPartidas} no total</span>
-                    </div>
-                </div>
-
-                {totalPartidas > PAGE_SIZE && (
-                    <div className="pd2Pager">
-                        <div className="pd2PagerInfo">
-                            Mostrando <b>{pageStart + 1}</b>–<b>{pageEnd}</b> de <b>{totalPartidas}</b>
-                        </div>
-
-                        <div className="pd2PagerBtns">
-                            <button className="pd2BtnSmall pd2BtnGhost" onClick={() => setPage(1)} disabled={page === 1} title="Primeira">
-                                «
-                            </button>
-
-                            <button
-                                className="pd2BtnSmall pd2BtnGhost"
-                                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                disabled={page === 1}
-                                title="Anterior"
-                            >
-                                ←
-                            </button>
-
-                            <div className="pd2PagerPage">
-                                Página <b>{page}</b> / <b>{totalPages}</b>
-                            </div>
-
-                            <button
-                                className="pd2BtnSmall pd2BtnGhost"
-                                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages}
-                                title="Próxima"
-                            >
-                                →
-                            </button>
-
-                            <button
-                                className="pd2BtnSmall pd2BtnGhost"
-                                onClick={() => setPage(totalPages)}
-                                disabled={page === totalPages}
-                                title="Última"
-                            >
-                                »
-                            </button>
+                        <div className="x-phero-actions">
+                            <button className="x-btn ghost sm" onClick={() => nav(`/equipes/${equipeId}`)}>Abrir equipe</button>
+                            {souAdmin && (
+                                <button className="x-btn" onClick={() => setShowCreate(v => !v)}>
+                                    {showCreate ? "Fechar" : "Nova partida"} {!showCreate && <span className="x-btn-arr">+</span>}
+                                </button>
+                            )}
                         </div>
                     </div>
-                )}
-
-                {partidas.length === 0 ? (
-                    <div className="pd2Empty">Nenhuma partida criada ainda.</div>
-                ) : (
-                    <div className="pd2List">
-                        {partidasPaginadas.map((p) => {
-                            const iso = String(p.dataHora);
-                            const d = new Date(iso);
-                            const ts = d.getTime();
-                            const now = Date.now();
-
-                            const isValid = !Number.isNaN(ts);
-                            const isFuture = isValid && ts >= now;
-                            const badgeClass = isFuture ? "pd2BadgeFuture" : "pd2BadgePast";
-
-                            return (
-                                <div
-                                    key={p.id}
-                                    className="pd2Row"
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => nav(`/partidas/${p.id}`)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") nav(`/partidas/${p.id}`);
-                                    }}
-                                >
-                                    <div className="pd2RowLeft">
-                                        <div className={`pd2Badge ${badgeClass}`}>{isFuture ? "Próxima" : "Histórico"}</div>
-
-                                        <div className="pd2RowTitle">
-                                            {p.statusPartida}
-                                            <span className="pd2RowId">#{p.id}</span>
-                                        </div>
-
-                                        <div className="pd2RowSub">{fmtDataHora(p.dataHora)}</div>
-                                    </div>
-
-                                    <div className="pd2RowRight">
-                                        <div className="pd2Metric">
-                                            <div className="pd2MetricLabel">Confirmados</div>
-                                            <div className="pd2MetricValue">{p.totalConfirmados}</div>
-                                        </div>
-
-                                        <div className="pd2Chevron">→</div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-
-                <div className="pd2Footer">
-                    <button className="pd2Btn pd2BtnGhost" onClick={() => nav(-1)}>
-                        Voltar
-                    </button>
-
-                    <button className="pd2Btn" onClick={() => nav(`/equipes/${equipeId}`)}>
-                        Abrir equipe
-                    </button>
                 </div>
             </div>
+
+            <main className="x-app-main">
+                <div className="x-app-container">
+                    <div className="x-stats x-stagger" style={{ marginBottom: 32 }}>
+                        <div className="x-stat x-reveal">
+                            <div className="x-stat-lbl">Total de partidas</div>
+                            <div className="x-stat-val"><CountUp to={totalPartidas} /></div>
+                        </div>
+                        <div className="x-stat x-reveal">
+                            <div className="x-stat-lbl">Próximas</div>
+                            <div className="x-stat-val"><em><CountUp to={proximas} /></em></div>
+                        </div>
+                        <div className="x-stat x-reveal">
+                            <div className="x-stat-lbl">Confirmados (total)</div>
+                            <div className="x-stat-val"><CountUp to={totalConfirmados} /></div>
+                        </div>
+                        <div className="x-stat x-reveal">
+                            <div className="x-stat-lbl">Status</div>
+                            <div className="x-stat-val" style={{ fontSize: 14 }}>
+                                {souAdmin ? "Admin" : "Só leitura"}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Criar (só admin) */}
+                    {showCreate && souAdmin && (
+                        <div className="x-card pad-lg" style={{ marginBottom: 32 }}>
+                            <div className="x-card-title">Criar partida</div>
+                            <p className="x-card-sub">Defina data, política e tamanho de times.</p>
+                            <hr className="x-divider" />
+
+                            <div className="x-form-grid" style={{ marginBottom: 20 }}>
+                                <div className="x-field">
+                                    <label>Data/Hora</label>
+                                    <input
+                                        className="x-input"
+                                        type="datetime-local"
+                                        value={dataHoraLocal}
+                                        onChange={(e) => {
+                                            const iso2 = toIsoFromDatetimeLocal(e.target.value);
+                                            if (!iso2) return;
+                                            setForm((p) => ({ ...p, dataHora: iso2 }));
+                                        }}
+                                    />
+                                </div>
+                                <div className="x-field">
+                                    <label>Política de inscrição</label>
+                                    <select
+                                        className="x-select"
+                                        value={form.politicaInscricao}
+                                        onChange={(e) => setForm((p) => ({ ...p, politicaInscricao: e.target.value as any }))}
+                                    >
+                                        <option value="SOMENTE_MEMBROS">Somente membros</option>
+                                        <option value="AVULSOS_ABERTOS">Avulsos abertos</option>
+                                    </select>
+                                </div>
+                                <div className="x-field">
+                                    <label>Jogadores por time</label>
+                                    <input
+                                        className="x-input"
+                                        type="number"
+                                        min={1}
+                                        value={String(form.jogadoresPorTime)}
+                                        onChange={(e) => setForm((p) => ({ ...p, jogadoresPorTime: Number(e.target.value) }))}
+                                    />
+                                </div>
+                                <div className="x-field">
+                                    <label>Limite de participantes (opcional)</label>
+                                    <input
+                                        className="x-input"
+                                        type="number"
+                                        min={0}
+                                        value={form.limiteParticipantes === undefined ? "" : String(form.limiteParticipantes)}
+                                        onChange={(e) => {
+                                            const v = e.target.value;
+                                            setForm((p) => ({ ...p, limiteParticipantes: v === "" ? undefined : Number(v) }));
+                                        }}
+                                        placeholder="Vazio = sem limite"
+                                    />
+                                </div>
+                            </div>
+
+                            <div style={{ display: "flex", gap: 10 }}>
+                                <button className="x-btn" onClick={onCriarPartida} disabled={creating}>
+                                    {creating ? "Criando..." : "Criar partida"}
+                                </button>
+                                <button className="x-btn ghost" onClick={() => setShowCreate(false)}>Cancelar</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {!souAdmin && (
+                        <div className="x-alert warn" style={{ marginBottom: 24 }}>
+                            <div>
+                                <span className="x-alert-title">Somente leitura</span>
+                                <span className="x-alert-text">Apenas administradores podem criar partidas.</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Lista */}
+                    <div className="x-page-head" style={{ marginBottom: 20 }}>
+                        <div>
+                            <h2 className="x-h3">Partidas</h2>
+                            <p className="x-page-sub">Clique numa partida para ver detalhes.</p>
+                        </div>
+                        <span className="x-pill">{totalPartidas}</span>
+                    </div>
+
+                    {partidas.length === 0 ? (
+                        <div className="x-empty">
+                            <div className="x-empty-icon">
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                    <line x1="16" y1="2" x2="16" y2="6" />
+                                    <line x1="8" y1="2" x2="8" y2="6" />
+                                    <line x1="3" y1="10" x2="21" y2="10" />
+                                </svg>
+                            </div>
+                            <h3 className="x-empty-title">Nenhuma partida ainda</h3>
+                            <p className="x-empty-text">
+                                {souAdmin
+                                    ? "Crie a primeira partida e mande o link no grupo."
+                                    : "Espere o administrador criar uma partida."}
+                            </p>
+                            {souAdmin && !showCreate && (
+                                <button className="x-btn sm" onClick={() => setShowCreate(true)}>
+                                    Criar primeira partida <span className="x-btn-arr">+</span>
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="x-list">
+                            {partidasPaginadas.map((p) => {
+                                const ts = new Date(p.dataHora).getTime();
+                                const now = Date.now();
+                                const isFuture = !Number.isNaN(ts) && ts >= now;
+
+                                return (
+                                    <button key={p.id} className="x-list-item" onClick={() => nav(`/partidas/${p.id}`)}>
+                                        <div className="x-avatar sm">#{p.id}</div>
+                                        <div className="x-list-item-main">
+                                            <div className="x-list-item-title" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                                {p.statusPartida}
+                                                {isFuture ? (
+                                                    <span className="x-pill accent">Próxima</span>
+                                                ) : (
+                                                    <span className="x-pill">Histórico</span>
+                                                )}
+                                            </div>
+                                            <div className="x-list-item-sub">
+                                                <span>{fmtDataHora(p.dataHora)}</span>
+                                                <span className="sep">·</span>
+                                                <span>{p.totalConfirmados} confirmados</span>
+                                            </div>
+                                        </div>
+                                        <div className="x-list-item-right">
+                                            <span className="x-chev">→</span>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {totalPartidas > PAGE_SIZE && (
+                        <div className="x-pager">
+                            <div className="x-pager-info">
+                                Mostrando <b>{pageStart + 1}</b>–<b>{pageEnd}</b> de <b>{totalPartidas}</b>
+                            </div>
+                            <div className="x-pager-btns">
+                                <button className="x-btn ghost sm" onClick={() => setPage(1)} disabled={page === 1}>«</button>
+                                <button className="x-btn ghost sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>←</button>
+                                <span className="x-meta" style={{ padding: "0 8px" }}>{page} / {totalPages}</span>
+                                <button className="x-btn ghost sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>→</button>
+                                <button className="x-btn ghost sm" onClick={() => setPage(totalPages)} disabled={page === totalPages}>»</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </main>
         </div>
     );
 }
