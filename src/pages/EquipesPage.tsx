@@ -116,8 +116,8 @@ export default function EquipesPage() {
     const [joining, setJoining] = useState(false);
     const [senhaEntrada, setSenhaEntrada] = useState("");
 
-    async function handleBuscar() {
-        const qq = normalizeStr(q);
+    async function handleBuscar(termo: string = q) {
+        const qq = normalizeStr(termo);
         try {
             setSearching(true);
             setSearchedOnce(true);
@@ -130,7 +130,12 @@ export default function EquipesPage() {
         } finally { setSearching(false); }
     }
 
-    useEffect(() => { handleBuscar(); /* eslint-disable-next-line */ }, []);
+    // debounce: busca 400ms depois que parou de digitar
+    useEffect(() => {
+        const t = setTimeout(() => { handleBuscar(q); }, 400);
+        return () => clearTimeout(t);
+        /* eslint-disable-next-line */
+    }, [q]);
 
     async function openDetalhe(id: string) {
         setSelectedId(id);
@@ -270,7 +275,17 @@ export default function EquipesPage() {
                                     <div className="x-field">
                                         <label>Senha da equipe</label>
                                         <input
-                                            className="x-input"
+                                            className="x-input x-masked"
+                                            type="text"
+                                            name="team-passcode"
+                                            autoComplete="off"
+                                            autoCorrect="off"
+                                            autoCapitalize="none"
+                                            spellCheck={false}
+                                            data-lpignore="true"
+                                            data-1p-ignore="true"
+                                            data-bwignore="true"
+                                            data-form-type="other"
                                             placeholder="Defina uma senha"
                                             value={create.senhaEquipe ?? ""}
                                             onChange={(e) => setCreateField("senhaEquipe", e.target.value)}
@@ -366,18 +381,37 @@ export default function EquipesPage() {
                             <span className="x-pill">{results.length}</span>
                         </div>
 
-                        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+                        <div className="x-search">
+                            <span className="x-search-icon" aria-hidden>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="11" cy="11" r="7" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg>
+                            </span>
                             <input
                                 className="x-input"
-                                placeholder="Buscar por nome..."
+                                placeholder="Buscar equipe por nome..."
                                 value={q}
                                 onChange={(e) => setQ(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleBuscar()}
-                                style={{ flex: 1 }}
+                                onKeyDown={(e) => { if (e.key === "Escape") setQ(""); }}
+                                autoComplete="off"
+                                spellCheck={false}
                             />
-                            <button className="x-btn" onClick={handleBuscar} disabled={searching}>
-                                {searching ? "..." : "Buscar"}
-                            </button>
+                            {searching && (
+                                <span className="x-search-spinner" aria-hidden>
+                                    <span className="x-search-spinner-dot" />
+                                </span>
+                            )}
+                            {!searching && q && (
+                                <button
+                                    type="button"
+                                    className="x-search-clear"
+                                    onClick={() => setQ("")}
+                                    aria-label="Limpar busca"
+                                >
+                                    ×
+                                </button>
+                            )}
                         </div>
 
                         {results.length === 0 ? (
@@ -445,7 +479,17 @@ export default function EquipesPage() {
 
                                     {statusEquipe === "FECHADA" && (
                                         <input
-                                            className="x-input"
+                                            className="x-input x-masked"
+                                            type="text"
+                                            name="team-passcode"
+                                            autoComplete="off"
+                                            autoCorrect="off"
+                                            autoCapitalize="none"
+                                            spellCheck={false}
+                                            data-lpignore="true"
+                                            data-1p-ignore="true"
+                                            data-bwignore="true"
+                                            data-form-type="other"
                                             placeholder="Senha da equipe"
                                             value={senhaEntrada}
                                             onChange={(e) => setSenhaEntrada(e.target.value)}

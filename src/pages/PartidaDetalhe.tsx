@@ -4,6 +4,7 @@ import {
     getPartida, confirmarPresenca, cancelarPresenca,
     fecharListaEGerarTimes, liberarAvaliacao, encerrarAvaliacao,
 } from "../services/partidas";
+import { getEquipe } from "../services/equipe";
 import { api } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import CountUp from "../components/CountUp";
@@ -29,7 +30,6 @@ type PartidaDetalhe = {
 };
 
 type EuResponse = { id: number; nome?: string };
-type EquipeAdminResumo = { id: number };
 
 function cap(s: string) { return !s ? s : s.charAt(0).toUpperCase() + s.slice(1); }
 function fmtDataHoraParts(iso?: string) {
@@ -74,24 +74,25 @@ export default function PartidaDetalhePage() {
         setLoading(true);
         try {
             const euRes = await api.get<EuResponse>("/eu");
-            setMeuId(euRes.data?.id ?? null);
+            const uid = euRes.data?.id ?? null;
+            setMeuId(uid);
 
             const d = await getPartida(partidaId);
             setData(d);
 
+            // Detecta admin/membro via /equipes/{id} (mais confiável que /eu/equipes-administrador)
             try {
-                const [admRes, memRes] = await Promise.all([
-                    api.get<EquipeAdminResumo[]>("/eu/equipes-administrador"),
-                    api.get<EquipeAdminResumo[]>("/eu/equipes"),
-                ]);
-                const admLista = admRes.data ?? [];
-                const memLista = memRes.data ?? [];
-                const isAdmin = admLista.some((e) => Number(e.id) === d.equipeId);
-                const isMembro = memLista.some((e) => Number(e.id) === d.equipeId);
+                const equipe: any = await getEquipe(String(d.equipeId));
+                const membros: any[] = equipe?.membros ?? [];
+                const meu = uid != null ? membros.find((m) => m.usuarioId === uid) : null;
+                const papel = String(meu?.papel ?? "").toUpperCase();
+                const isAdmin = !!meu && meu.ativo !== false && (papel === "ADMIN" || papel === "ADMINISTRADOR");
+                const isMembro = !!meu && meu.ativo !== false;
                 setSouAdminDaEquipe(isAdmin);
                 setSouMembroDaEquipe(isAdmin || isMembro);
             } catch {
-                const fallback = (euRes.data?.id ?? null) === d.criadoPorUsuarioId;
+                // fallback: se criou a partida, é admin da equipe
+                const fallback = uid === d.criadoPorUsuarioId;
                 setSouAdminDaEquipe(fallback);
                 setSouMembroDaEquipe(fallback);
             }
@@ -238,7 +239,7 @@ export default function PartidaDetalhePage() {
 
             <main className="x-app-main">
                 <div className="x-app-container">
-                    <div className="x-stats x-stagger" style={{ marginBottom: 32 }}>
+                    <div className="x-stats x-stagger" style={{ marginBottom: 24 }}>
                         <div className="x-stat x-reveal">
                             <div className="x-stat-lbl">Confirmados</div>
                             <div className="x-stat-val"><em><CountUp to={confirmados} /></em></div>
@@ -256,6 +257,79 @@ export default function PartidaDetalhePage() {
                             <div className="x-stat-val">{data.limiteParticipantes ? <CountUp to={data.limiteParticipantes} /> : "∞"}</div>
                         </div>
                     </div>
+
+                    {/* ═══ NEXT STEP BANNER (admin) ═══════════════════ */}
+                    {souAdminDaEquipe && partidaAberta && !data.timesGerados && (
+                        <div className="x-next-step">
+                            <div className="x-next-step-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                    <polyline points="9 11 12 14 22 4" />
+                                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                                </svg>
+                            </div>
+                            <div className="x-next-step-body">
+                                <div className="x-next-step-label">Próximo passo</div>
+                                <h3 className="x-next-step-title">Fechar lista & gerar times</h3>
+                                <div className="x-next-step-desc">
+                                    Quando todos estiverem confirmados, feche a lista pra sortear os times nivelados.
+                                </div>
+                            </div>
+                            <div className="x-next-step-actions">
+                                <button className="x-btn" onClick={onFecharListaEGerarTimes} disabled={generating}>
+                                    {generating ? "Gerando..." : "Fechar e gerar"}
+                                    <span className="x-btn-arr">→</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    {souAdminDaEquipe && listaFechada && data.timesGerados && (
+                        <div className="x-next-step">
+                            <div className="x-next-step-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                </svg>
+                            </div>
+                            <div className="x-next-step-body">
+                                <div className="x-next-step-label">Próximo passo</div>
+                                <h3 className="x-next-step-title">Liberar avaliação</h3>
+                                <div className="x-next-step-desc">
+                                    Times já sorteados. Libere pros jogadores avaliarem o equilíbrio dos times.
+                                </div>
+                            </div>
+                            <div className="x-next-step-actions">
+                                <button className="x-btn" onClick={onLiberarAvaliacao} disabled={liberandoAvaliacao}>
+                                    {liberandoAvaliacao ? "Liberando..." : "Liberar avaliação"}
+                                    <span className="x-btn-arr">→</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                    {avaliacaoLiberada && souMembroDaEquipe && (
+                        <div className="x-next-step">
+                            <div className="x-next-step-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                </svg>
+                            </div>
+                            <div className="x-next-step-body">
+                                <div className="x-next-step-label">Sua vez</div>
+                                <h3 className="x-next-step-title">Avaliar os times</h3>
+                                <div className="x-next-step-desc">
+                                    A avaliação foi liberada. Dê uma nota de 0 a 10 pra cada time.
+                                </div>
+                            </div>
+                            <div className="x-next-step-actions">
+                                <button className="x-btn" onClick={() => nav(`/partidas/${data.id}/avaliar`)}>
+                                    Avaliar agora <span className="x-btn-arr">→</span>
+                                </button>
+                                {souAdminDaEquipe && (
+                                    <button className="x-btn ghost" onClick={onEncerrarAvaliacao} disabled={encerrandoAvaliacao}>
+                                        {encerrandoAvaliacao ? "..." : "Encerrar"}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* CTA presença */}
                     <div className="x-card" style={{ marginBottom: 24 }}>
@@ -375,40 +449,20 @@ export default function PartidaDetalhePage() {
                                     </div>
                                 </div>
 
-                                {souAdminDaEquipe && listaFechada && (
-                                    <div style={{ marginTop: 24, display: "flex", gap: 10 }}>
-                                        <button className="x-btn" onClick={onLiberarAvaliacao} disabled={liberandoAvaliacao}>
-                                            {liberandoAvaliacao ? "..." : "Liberar avaliação"}
-                                        </button>
-                                    </div>
-                                )}
-                                {avaliacaoLiberada && (
-                                    <div style={{ marginTop: 24, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                                        {souMembroDaEquipe && (
-                                            <button className="x-btn" onClick={() => nav(`/partidas/${data.id}/avaliar`)}>
-                                                Avaliar agora <span className="x-btn-arr">→</span>
-                                            </button>
-                                        )}
-                                        {souAdminDaEquipe && (
-                                            <button className="x-btn ghost" onClick={onEncerrarAvaliacao} disabled={encerrandoAvaliacao}>
-                                                {encerrandoAvaliacao ? "..." : "Encerrar avaliação"}
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
                             </>
                         ) : (
-                            <div>
-                                <p className="x-meta" style={{ marginBottom: 20 }}>
-                                    Os times ainda não foram gerados.
+                            <div className="x-empty" style={{ padding: 32 }}>
+                                <div className="x-empty-icon">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12 6 12 12 16 14" />
+                                    </svg>
+                                </div>
+                                <p className="x-empty-text">
+                                    {souAdminDaEquipe
+                                        ? "Aguardando lista fechar. Use o botão acima quando estiver pronto."
+                                        : "Os times serão gerados quando o administrador fechar a lista."}
                                 </p>
-                                {souAdminDaEquipe ? (
-                                    <button className="x-btn" onClick={onFecharListaEGerarTimes} disabled={!partidaAberta || generating}>
-                                        {generating ? "..." : "Fechar lista e gerar times"}
-                                    </button>
-                                ) : (
-                                    <p className="x-meta">Apenas administradores podem fechar a lista e gerar times.</p>
-                                )}
                             </div>
                         )}
                     </div>

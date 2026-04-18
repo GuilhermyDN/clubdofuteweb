@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../services/api";
 import { getPartida, enviarAvaliacoesTimes } from "../services/partidas";
 import AppHeader from "../components/AppHeader";
+import StarRating from "../components/StarRating";
 import { toast } from "../components/Toast";
 import { explainError, isAuthError } from "../utils/errors";
 
@@ -71,7 +72,7 @@ export default function PartidaAvaliacaoPage() {
                 g = "Os times ainda não foram gerados para esta partida.";
             }
             if (!g && uid) {
-                const minha = (d.presencas ?? []).find((p) => p.usuarioId === uid);
+                const minha = (d.presencas ?? []).find((p: Presenca) => p.usuarioId === uid);
                 if (!minha || minha.statusPresenca !== "CONFIRMADO") {
                     g = "Você precisa estar confirmado nesta partida para poder avaliar.";
                 }
@@ -118,7 +119,6 @@ export default function PartidaAvaliacaoPage() {
     }, [times, notasPorTime]);
 
     const podeInteragir = !!data && !gateErr && !jaEnviouAvaliacao;
-    const podeEnviar = podeInteragir && !sending && faltandoTimes.length === 0 && data?.statusPartida === "AVALIACAO_LIBERADA";
 
     async function onEnviar() {
         if (!partidaId) return;
@@ -145,16 +145,15 @@ export default function PartidaAvaliacaoPage() {
                 localStorage.setItem(sentKey(partidaId, meuId), "1");
                 setJaEnviouAvaliacao(true);
             }
+            // redireciona pra tela da equipe após curta pausa pra o usuário ver o toast
+            setTimeout(() => {
+                if (data?.equipeId) nav(`/equipes/${data.equipeId}`, { replace: true });
+                else nav(-1);
+            }, 900);
         } catch (e: any) {
             if (!isAuthError(e)) toast.error(explainError(e), "Falha ao enviar avaliação");
         }
         finally { setSending(false); }
-    }
-
-    function onLimpar() {
-        if (sending || jaEnviouAvaliacao) return;
-        setNotasPorTime({});
-        if (times.length > 0) setTab(times[0].alvoId);
     }
 
     if (loading) {
@@ -221,149 +220,132 @@ export default function PartidaAvaliacaoPage() {
                         </div>
                     )}
 
-                    <div className="x-stats" style={{ marginBottom: 32 }}>
-                        <div className="x-stat">
-                            <div className="x-stat-lbl">Times</div>
-                            <div className="x-stat-val">{times.length}</div>
-                        </div>
-                        <div className="x-stat">
-                            <div className="x-stat-lbl">Avaliados</div>
-                            <div className="x-stat-val"><em>{times.length - faltandoTimes.length}</em></div>
-                        </div>
-                        <div className="x-stat">
-                            <div className="x-stat-lbl">Faltam</div>
-                            <div className="x-stat-val">{faltandoTimes.length}</div>
-                        </div>
-                        <div className="x-stat">
-                            <div className="x-stat-lbl">Partida</div>
-                            <div className="x-stat-val">#{data.id}</div>
-                        </div>
-                    </div>
+                    {/* Wizard: um time por vez */}
+                    {(() => {
+                        const currentIndex = Math.max(0, times.findIndex((t) => t.alvoId === tab));
+                        const isLast = currentIndex >= times.length - 1;
+                        const isFirst = currentIndex <= 0;
+                        const currentRated = typeof notasPorTime[tab] === "number";
+                        const allRated = faltandoTimes.length === 0;
+                        const progress = times.length
+                            ? ((times.length - faltandoTimes.length) / times.length) * 100
+                            : 0;
 
-                    <div className="x-grid-2">
-                        {/* Main: tabs + rating */}
-                        <div className="x-card pad-lg">
-                            <div className="x-card-title">Avaliar cada time</div>
-                            <p className="x-card-sub">Dê uma nota de 0 a 10 para cada time.</p>
-                            <hr className="x-divider" />
+                        function goPrev() {
+                            if (isFirst) return;
+                            setTab(times[currentIndex - 1].alvoId);
+                        }
+                        function goNextOrSend() {
+                            if (!currentRated) {
+                                toast.warn("Dê uma nota antes de avançar.");
+                                return;
+                            }
+                            if (!isLast) {
+                                setTab(times[currentIndex + 1].alvoId);
+                                return;
+                            }
+                            // último time — envia
+                            if (!allRated) {
+                                // pula pro primeiro time ainda não avaliado
+                                const missing = faltandoTimes[0];
+                                if (missing) { setTab(missing.alvoId); return; }
+                            }
+                            onEnviar();
+                        }
 
-                            {/* Tabs dos times */}
-                            <div className="x-tabs">
-                                {times.map((t) => {
-                                    const isActive = t.alvoId === tab;
-                                    const notaDraft = notasPorTime[t.alvoId];
-                                    const has = typeof notaDraft === "number";
-                                    return (
-                                        <button
-                                            key={t.alvoId}
-                                            className={`x-tab ${isActive ? "on" : ""}`}
-                                            onClick={() => setTab(t.alvoId)}
-                                        >
-                                            <span className="x-tab-name">Time {t.numero}</span>
-                                            <span className="x-tab-sub">{t.jogadores.length} jogadores</span>
-                                            <span className="x-tab-badge">{has ? notaDraft : "—"}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            {timeSelecionado && (
-                                <>
-                                    <div className="x-row" style={{ marginBottom: 20 }}>
-                                        <div className="x-avatar sm">T{timeSelecionado.numero}</div>
-                                        <div className="x-row-main">
-                                            <div className="x-row-name">Time {timeSelecionado.numero}</div>
-                                            <div className="x-row-meta">
-                                                {timeSelecionado.jogadores.map((j) => (
-                                                    <span key={j.usuarioId} className="x-pill">{j.nome}</span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="x-row-actions">
-                                            <div className="x-stat-val" style={{ fontSize: 28 }}>
-                                                {notaLocal.toFixed(1)}
-                                            </div>
-                                        </div>
+                        return (
+                            <div className="x-wizard x-reveal">
+                                {/* Stepper */}
+                                <div className="x-wizard-head">
+                                    <div className="x-wizard-step-label">
+                                        Time <strong>{currentIndex + 1}</strong> de <strong>{times.length}</strong>
                                     </div>
-
-                                    <div className="x-label" style={{ marginBottom: 10 }}>
-                                        Nota do time (0 a 10)
+                                    <div className="x-wizard-dots">
+                                        {times.map((t, i) => {
+                                            const has = typeof notasPorTime[t.alvoId] === "number";
+                                            const cur = i === currentIndex;
+                                            return (
+                                                <button
+                                                    key={t.alvoId}
+                                                    type="button"
+                                                    className={`x-wizard-dot ${cur ? "cur" : ""} ${has ? "has" : ""}`}
+                                                    onClick={() => setTab(t.alvoId)}
+                                                    aria-label={`Ir para Time ${t.numero}`}
+                                                />
+                                            );
+                                        })}
                                     </div>
-                                    <div className="x-scale">
-                                        {Array.from({ length: 11 }).map((_, i) => (
-                                            <button
-                                                key={i}
-                                                className={i === notaLocal ? "on" : ""}
-                                                onClick={() => setNotaTime(timeSelecionado.alvoId, i)}
-                                                disabled={!podeInteragir}
-                                            >
-                                                {i}
-                                            </button>
-                                        ))}
-                                    </div>
+                                </div>
 
-                                    <div style={{ display: "flex", gap: 10, marginTop: 20, justifyContent: "space-between" }}>
-                                        <button
-                                            className="x-btn ghost"
-                                            onClick={() => {
-                                                const idx = times.findIndex((t) => t.alvoId === tab);
-                                                const prev = idx <= 0 ? times.length - 1 : idx - 1;
-                                                setTab(times[prev].alvoId);
-                                            }}
-                                            disabled={!times.length}
-                                        >← Anterior</button>
-                                        <button
-                                            className="x-btn ghost"
-                                            onClick={() => {
-                                                const idx = times.findIndex((t) => t.alvoId === tab);
-                                                const next = idx >= times.length - 1 ? 0 : idx + 1;
-                                                setTab(times[next].alvoId);
-                                            }}
-                                            disabled={!times.length}
-                                        >Próximo →</button>
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                                {/* Progress bar */}
+                                <div className="x-progress" aria-hidden>
+                                    <div className="x-progress-fill" style={{ width: `${progress}%` }} />
+                                </div>
 
-                        {/* Side: resumo + ações */}
-                        <div className="x-card pad-lg">
-                            <div className="x-card-title">Resumo</div>
-                            <p className="x-card-sub">Seu progresso.</p>
-                            <hr className="x-divider" />
-
-                            <div className="x-side-summary">
-                                {times.map((t) => {
-                                    const nota = notasPorTime[t.alvoId];
-                                    const has = typeof nota === "number";
-                                    return (
-                                        <div className={`x-side-row ${has ? "has" : ""}`} key={t.alvoId}>
+                                {/* Team card */}
+                                {timeSelecionado && (
+                                    <div className="x-wizard-card">
+                                        <div className="x-wizard-team">
+                                            <div className="x-avatar lg">T{timeSelecionado.numero}</div>
                                             <div>
-                                                <div className="x-side-row-name">Time {t.numero}</div>
-                                                <div className="x-side-row-sub">{t.jogadores.length} jogadores</div>
+                                                <h3 className="x-wizard-team-name">Time {timeSelecionado.numero}</h3>
+                                                <div className="x-wizard-team-sub">
+                                                    {timeSelecionado.jogadores.length} jogador{timeSelecionado.jogadores.length !== 1 ? "es" : ""}
+                                                </div>
                                             </div>
-                                            <div className="x-side-row-val">{has ? nota : "—"}</div>
                                         </div>
-                                    );
-                                })}
+
+                                        <div className="x-wizard-roster">
+                                            {timeSelecionado.jogadores.map((j) => (
+                                                <div key={j.usuarioId} className="x-wizard-player">
+                                                    <div className="x-avatar sm teal">
+                                                        {String(j.nome || "?").trim().charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <span>{j.nome}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="x-wizard-rating">
+                                            <div className="x-wizard-rating-label">Qual nota para este time?</div>
+                                            <StarRating
+                                                value={notaLocal}
+                                                onChange={(v) => setNotaTime(timeSelecionado.alvoId, v)}
+                                                disabled={!podeInteragir}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Nav buttons */}
+                                <div className="x-wizard-nav">
+                                    <button
+                                        className="x-btn ghost"
+                                        onClick={goPrev}
+                                        disabled={isFirst}
+                                    >
+                                        ← Anterior
+                                    </button>
+                                    <button
+                                        className="x-btn"
+                                        onClick={goNextOrSend}
+                                        disabled={!podeInteragir || sending || (isLast && !currentRated)}
+                                    >
+                                        {sending
+                                            ? "Enviando..."
+                                            : isLast && allRated
+                                                ? "Enviar avaliação"
+                                                : "Próximo"}
+                                        <span className="x-btn-arr">→</span>
+                                    </button>
+                                </div>
+
+                                <p className="x-wizard-fine">
+                                    Ao enviar, suas notas ficam registradas e o site bloqueia nova edição neste dispositivo.
+                                </p>
                             </div>
-
-                            <hr className="x-divider" />
-
-                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                                <button className="x-btn block" onClick={onEnviar} disabled={!podeEnviar}>
-                                    {sending ? "..." : "Enviar avaliação"} <span className="x-btn-arr">→</span>
-                                </button>
-                                <button className="x-btn ghost block" onClick={onLimpar} disabled={sending || jaEnviouAvaliacao}>
-                                    Limpar rascunho
-                                </button>
-                            </div>
-
-                            <p className="x-meta" style={{ marginTop: 16, fontSize: 12, lineHeight: 1.5 }}>
-                                Ao enviar, suas notas são registradas e o site bloqueia nova edição neste dispositivo.
-                            </p>
-                        </div>
-                    </div>
+                        );
+                    })()}
                 </div>
             </main>
         </div>

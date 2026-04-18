@@ -52,9 +52,22 @@ export default function EquipeDetalhePage() {
             const [eu, equipe] = await Promise.all([getEu(), getEquipe(equipeId)]);
             setEuId(eu.id);
             setData(equipe);
-            const meu = (equipe.membros ?? []).find((m) => m.usuarioId === eu.id);
-            setSouAdmin(isAdminRole(meu?.papel));
-            setSouMembro(meu !== undefined);
+
+            // Admin detection com múltiplas fontes (robusta contra backends variantes)
+            const anyEquipe: any = equipe;
+            const membros: any[] = anyEquipe.membros ?? [];
+            const meu = membros.find((m) => m.usuarioId === eu.id);
+
+            // Prioridade 1: campos meuPapel / souMembro do backend
+            const papelExplicito = anyEquipe.meuPapel;
+            if (papelExplicito) {
+                setSouAdmin(String(papelExplicito).toUpperCase().startsWith("ADMIN"));
+                setSouMembro(anyEquipe.souMembro !== false);
+            } else {
+                // Fallback: procura na lista de membros
+                setSouAdmin(isAdminRole(meu?.papel));
+                setSouMembro(meu !== undefined && meu.ativo !== false);
+            }
             setPage((p) => Math.max(1, p));
         } catch (e: any) {
             if (isAuthError(e)) return;
@@ -83,23 +96,26 @@ export default function EquipeDetalhePage() {
 
     async function doPromover(usuarioId: number) {
         if (!data) return;
+        const eqId = Number(data.id);
         setBusyUserId(usuarioId);
-        try { await promoverAdmin(data.id, usuarioId); toast.success("Usuário promovido a administrador."); await load(); }
+        try { await promoverAdmin(eqId, usuarioId); toast.success("Usuário promovido a administrador."); await load(); }
         catch (e: any) { if (!isAuthError(e)) toast.error(explainError(e), "Falha ao promover"); }
         finally { setBusyUserId(null); }
     }
     async function doRebaixar(usuarioId: number) {
         if (!data) return;
         if (adminsAtivos <= 1) { toast.warn("Não é possível rebaixar o último administrador."); return; }
+        const eqId = Number(data.id);
         setBusyUserId(usuarioId);
-        try { await rebaixarMembro(data.id, usuarioId); toast.success("Administrador rebaixado."); await load(); }
+        try { await rebaixarMembro(eqId, usuarioId); toast.success("Administrador rebaixado."); await load(); }
         catch (e: any) { if (!isAuthError(e)) toast.error(explainError(e), "Falha ao rebaixar"); }
         finally { setBusyUserId(null); }
     }
     async function doRemover(usuarioId: number) {
         if (!data) return;
+        const eqId = Number(data.id);
         setBusyUserId(usuarioId);
-        try { await removerMembro(data.id, usuarioId); toast.success("Membro removido."); await load(); }
+        try { await removerMembro(eqId, usuarioId); toast.success("Membro removido."); await load(); }
         catch (e: any) { if (!isAuthError(e)) toast.error(explainError(e), "Falha ao remover"); }
         finally { setBusyUserId(null); }
     }
@@ -218,29 +234,47 @@ export default function EquipeDetalhePage() {
 
             <main className="x-app-main">
                 <div className="x-app-container">
-                    {/* Stats */}
-                    <div className="x-stats x-stagger" style={{ marginBottom: 32 }}>
-                        <div className="x-stat x-reveal">
-                            <div className="x-stat-lbl">Membros ativos</div>
-                            <div className="x-stat-val"><CountUp to={membrosAtivos} /><em>/{totalMembros}</em></div>
+                    {/* Stats compactas */}
+                    <div className="x-stats-compact x-reveal" style={{ marginBottom: 24 }}>
+                        <div className="x-stat-mini">
+                            <span className="x-stat-mini-lbl">Membros</span>
+                            <span className="x-stat-mini-val"><CountUp to={totalMembros} /></span>
                         </div>
-                        <div className="x-stat x-reveal">
-                            <div className="x-stat-lbl">Administradores</div>
-                            <div className="x-stat-val"><CountUp to={adminsAtivos} /></div>
+                        <div className="x-stat-mini">
+                            <span className="x-stat-mini-lbl">Ativos</span>
+                            <span className="x-stat-mini-val"><CountUp to={membrosAtivos} /></span>
                         </div>
-                        <div className="x-stat x-reveal">
-                            <div className="x-stat-lbl">Agenda padrão</div>
-                            <div className="x-stat-val" style={{ fontSize: 14, fontWeight: 600 }}>
-                                {data.diasHorariosPadrao || "—"}
-                            </div>
-                        </div>
-                        <div className="x-stat x-reveal">
-                            <div className="x-stat-lbl">Criada em</div>
-                            <div className="x-stat-val" style={{ fontSize: 14, fontWeight: 600 }}>
-                                {criadoEm ?? "—"}
-                            </div>
+                        <div className="x-stat-mini">
+                            <span className="x-stat-mini-lbl">Admins</span>
+                            <span className="x-stat-mini-val"><CountUp to={adminsAtivos} /></span>
                         </div>
                     </div>
+
+                    {/* Meta row */}
+                    {(data.diasHorariosPadrao || criadoEm) && (
+                        <div className="x-meta-row x-reveal" style={{ marginBottom: 28 }}>
+                            {data.diasHorariosPadrao && (
+                                <div className="x-meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                                        <line x1="16" y1="2" x2="16" y2="6" />
+                                        <line x1="8" y1="2" x2="8" y2="6" />
+                                        <line x1="3" y1="10" x2="21" y2="10" />
+                                    </svg>
+                                    <span>{data.diasHorariosPadrao}</span>
+                                </div>
+                            )}
+                            {criadoEm && (
+                                <div className="x-meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12 6 12 12 16 14" />
+                                    </svg>
+                                    <span>Criada em {criadoEm}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Members */}
                     <div className="x-card pad-lg">
@@ -248,7 +282,13 @@ export default function EquipeDetalhePage() {
                             Membros
                             <span className="x-pill">{totalMembros}</span>
                         </div>
-                        <p className="x-card-sub">Ações só aparecem para administradores.</p>
+                        <p className="x-card-sub">
+                            {souAdmin
+                                ? "Como admin, você pode promover, rebaixar ou remover membros."
+                                : souMembro
+                                    ? "Você é membro desta equipe."
+                                    : "Apenas membros visualizam ações."}
+                        </p>
                         <hr className="x-divider" />
 
                         <div className="x-list">
@@ -333,8 +373,17 @@ export default function EquipeDetalhePage() {
                             Para entrar em <b>{data.nome}</b>, informe a senha da equipe.
                         </p>
                         <input
-                            className="x-input"
-                            type="password"
+                            className="x-input x-masked"
+                            type="text"
+                            name="team-passcode"
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="none"
+                            spellCheck={false}
+                            data-lpignore="true"
+                            data-1p-ignore="true"
+                            data-bwignore="true"
+                            data-form-type="other"
                             placeholder="Senha"
                             value={senhaInput}
                             onChange={(e) => setSenhaInput(e.target.value)}

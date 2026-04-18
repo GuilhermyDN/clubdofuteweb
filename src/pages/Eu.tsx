@@ -4,6 +4,7 @@ import { api } from "../services/api";
 import AppHeader from "../components/AppHeader";
 import { toast } from "../components/Toast";
 import { explainError, isAuthError } from "../utils/errors";
+import { clearToken } from "../utils/auth";
 
 type EuResponse = {
     id: number;
@@ -351,6 +352,31 @@ export default function EuPage() {
                                 ))}
                             </div>
                         )}
+                    </div>
+
+                    {/* Sair da conta */}
+                    <div className="x-logout-card">
+                        <div>
+                            <div className="x-logout-title">Sair da conta</div>
+                            <div className="x-logout-sub">
+                                Você precisará entrar de novo com seu telefone e senha.
+                            </div>
+                        </div>
+                        <button
+                            className="x-btn ghost"
+                            onClick={() => {
+                                clearToken();
+                                toast.info("Você saiu do clube. Até a próxima!");
+                                nav("/");
+                            }}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                <polyline points="16 17 21 12 16 7" />
+                                <line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
+                            Sair
+                        </button>
                     </div>
                 </div>
             </main>
