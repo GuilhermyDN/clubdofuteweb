@@ -157,7 +157,7 @@ export default function EquipePartidasPage() {
                         <div>
                             <h1 className="x-phero-title">Partidas da equipe</h1>
                             <div className="x-meta" style={{ marginBottom: 18 }}>
-                                Histórico, criação e métricas da equipe #{equipeId}
+                                Histórico, criação e métricas da sua equipe
                             </div>
                             <div className="x-phero-meta">
                                 {souAdmin ? (
@@ -318,14 +318,20 @@ export default function EquipePartidasPage() {
 
                                 return (
                                     <button key={p.id} className="x-list-item" onClick={() => nav(`/partidas/${p.id}`)}>
-                                        <div className="x-avatar sm">#{p.id}</div>
+                                        <div className="x-avatar sm">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                                <rect x="3" y="4" width="18" height="18" rx="2" />
+                                                <line x1="16" y1="2" x2="16" y2="6" />
+                                                <line x1="8" y1="2" x2="8" y2="6" />
+                                            </svg>
+                                        </div>
                                         <div className="x-list-item-main">
                                             <div className="x-list-item-title" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                                {p.statusPartida}
+                                                {isFuture ? "Próxima partida" : "Partida anterior"}
                                                 {isFuture ? (
-                                                    <span className="x-pill accent">Próxima</span>
+                                                    <span className="x-pill accent">{p.statusPartida}</span>
                                                 ) : (
-                                                    <span className="x-pill">Histórico</span>
+                                                    <span className="x-pill">{p.statusPartida}</span>
                                                 )}
                                             </div>
                                             <div className="x-list-item-sub">

@@ -213,7 +213,7 @@ export default function EuPage() {
                         <div className="x-avatar xl">{initials}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <h1 className="x-page-title">{data.nome}</h1>
-                            <p className="x-page-sub">{data.telefone} · ID #{data.id}</p>
+                            <p className="x-page-sub">{data.telefone}</p>
                         </div>
                     </div>
 

@@ -123,6 +123,7 @@ export default function PartidaDetalhePage() {
     const partidaAberta = data?.statusPartida === "ABERTA";
     const listaFechada = data?.statusPartida === "LISTA_FECHADA";
     const avaliacaoLiberada = data?.statusPartida === "AVALIACAO_LIBERADA";
+    const partidaEncerrada = data?.statusPartida === "ENCERRADA";
 
     const podeConfirmar = !!data && partidaAberta && !estouConfirmado && (limite === 0 || confirmados < limite);
     const podeCancelar = !!data && partidaAberta && estouConfirmado;
@@ -220,7 +221,7 @@ export default function PartidaDetalhePage() {
                             <div className="x-when">
                                 <div className="x-when-day">{when.weekday}</div>
                                 <div className="x-when-date">{when.date}</div>
-                                <div className="x-when-time">⏰ {when.time} · Partida #{data.id}</div>
+                                <div className="x-when-time">⏰ {when.time}</div>
                             </div>
                             <div className="x-phero-meta">
                                 <span className="x-pill">{data.statusPartida}</span>
@@ -304,7 +305,7 @@ export default function PartidaDetalhePage() {
                             </div>
                         </div>
                     )}
-                    {avaliacaoLiberada && souMembroDaEquipe && (
+                    {avaliacaoLiberada && (
                         <div className="x-next-step">
                             <div className="x-next-step-icon">
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
@@ -312,21 +313,47 @@ export default function PartidaDetalhePage() {
                                 </svg>
                             </div>
                             <div className="x-next-step-body">
-                                <div className="x-next-step-label">Sua vez</div>
-                                <h3 className="x-next-step-title">Avaliar os times</h3>
+                                <div className="x-next-step-label">
+                                    {souMembroDaEquipe ? "Sua vez" : "Avaliação em andamento"}
+                                </div>
+                                <h3 className="x-next-step-title">
+                                    {souMembroDaEquipe ? "Avaliar os times" : "Aguardando notas"}
+                                </h3>
                                 <div className="x-next-step-desc">
-                                    A avaliação foi liberada. Dê uma nota de 0 a 10 pra cada time.
+                                    {souMembroDaEquipe
+                                        ? "Dê uma nota pra cada time. Quando todos terminarem, o admin encerra."
+                                        : "Os jogadores estão enviando as notas. O admin pode encerrar quando quiser."}
                                 </div>
                             </div>
                             <div className="x-next-step-actions">
-                                <button className="x-btn" onClick={() => nav(`/partidas/${data.id}/avaliar`)}>
-                                    Avaliar agora <span className="x-btn-arr">→</span>
-                                </button>
-                                {souAdminDaEquipe && (
-                                    <button className="x-btn ghost" onClick={onEncerrarAvaliacao} disabled={encerrandoAvaliacao}>
-                                        {encerrandoAvaliacao ? "..." : "Encerrar"}
+                                {souMembroDaEquipe && (
+                                    <button className="x-btn" onClick={() => nav(`/partidas/${data.id}/avaliar`)}>
+                                        Avaliar agora <span className="x-btn-arr">→</span>
                                     </button>
                                 )}
+                                {souAdminDaEquipe && (
+                                    <button className="x-btn ghost" onClick={onEncerrarAvaliacao} disabled={encerrandoAvaliacao}>
+                                        {encerrandoAvaliacao ? "Encerrando..." : "Encerrar avaliação"}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {partidaEncerrada && (
+                        <div className="x-next-step" style={{ background: "rgba(255, 255, 255, 0.03)", borderColor: "var(--x-border-2)" }}>
+                            <div className="x-next-step-icon" style={{ color: "var(--x-success)", borderColor: "var(--x-success)" }}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                    <polyline points="22 4 12 14.01 9 11.01" />
+                                </svg>
+                            </div>
+                            <div className="x-next-step-body">
+                                <div className="x-next-step-label" style={{ color: "var(--x-success)" }}>Partida concluída</div>
+                                <h3 className="x-next-step-title">Avaliação encerrada</h3>
+                                <div className="x-next-step-desc">
+                                    As notas foram registradas e vão calibrar os próximos sorteios. Valeu por jogar!
+                                </div>
                             </div>
                         </div>
                     )}
@@ -335,17 +362,37 @@ export default function PartidaDetalhePage() {
                     <div className="x-card" style={{ marginBottom: 24 }}>
                         <div className="x-card-title">
                             Minha presença
-                            <span className="x-pill">{minhaPresenca ? minhaPresenca.statusPresenca : "—"}</span>
+                            {minhaPresenca?.statusPresenca === "CONFIRMADO" && (
+                                <span className="x-pill success">Confirmado</span>
+                            )}
+                            {minhaPresenca?.statusPresenca === "CANCELADO" && (
+                                <span className="x-pill">Cancelado</span>
+                            )}
+                            {!minhaPresenca && <span className="x-pill">Pendente</span>}
                         </div>
-                        <p className="x-card-sub">Confirme ou cancele enquanto a partida estiver ABERTA.</p>
+                        <p className="x-card-sub">
+                            {partidaAberta
+                                ? estouConfirmado
+                                    ? "Você está confirmado. Pode cancelar a qualquer momento enquanto a lista estiver aberta."
+                                    : "Confirme sua presença pra entrar na lista da partida."
+                                : "A lista já foi fechada — não é mais possível alterar sua presença."}
+                        </p>
                         <hr className="x-divider" />
                         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                            <button className="x-btn" onClick={onConfirmar} disabled={!podeConfirmar || acting}>
-                                {acting ? "..." : "Confirmar presença"}
-                            </button>
-                            <button className="x-btn ghost" onClick={onCancelar} disabled={!podeCancelar || acting}>
-                                {acting ? "..." : "Cancelar"}
-                            </button>
+                            {!estouConfirmado ? (
+                                <button className="x-btn" onClick={onConfirmar} disabled={!podeConfirmar || acting}>
+                                    {acting ? "..." : "Confirmar presença"}
+                                    <span className="x-btn-arr">→</span>
+                                </button>
+                            ) : (
+                                <button className="x-btn danger" onClick={onCancelar} disabled={!podeCancelar || acting}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                    {acting ? "Cancelando..." : "Cancelar minha presença"}
+                                </button>
+                            )}
                         </div>
                     </div>
 

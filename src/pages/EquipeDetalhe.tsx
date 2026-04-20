@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getEquipe, entrarEquipeAberta, entrarEquipeFechada } from "../services/equipe";
+import { getEquipe, entrarEquipeAberta, entrarEquipeFechada, trocarSenhaEquipe } from "../services/equipe";
 import { getEu } from "../services/eu";
 import { promoverAdmin, rebaixarMembro, removerMembro } from "../services/membrosEquipe";
 import type { EquipeDetalhe } from "../services/equipe";
@@ -37,6 +37,30 @@ export default function EquipeDetalhePage() {
     const [loadingEntrar, setLoadingEntrar] = useState(false);
     const [showSenhaModal, setShowSenhaModal] = useState(false);
     const [senhaInput, setSenhaInput] = useState("");
+
+    // modal "trocar senha" (admin, só em equipes FECHADAS)
+    const [showTrocarSenha, setShowTrocarSenha] = useState(false);
+    const [novaSenha, setNovaSenha] = useState("");
+    const [trocandoSenha, setTrocandoSenha] = useState(false);
+
+    async function handleTrocarSenha() {
+        if (!equipeId) return;
+        if (!novaSenha.trim() || novaSenha.trim().length < 4) {
+            toast.warn("Nova senha precisa de pelo menos 4 caracteres.");
+            return;
+        }
+        try {
+            setTrocandoSenha(true);
+            await trocarSenhaEquipe(equipeId, novaSenha.trim());
+            toast.success("Senha da equipe atualizada.");
+            setShowTrocarSenha(false);
+            setNovaSenha("");
+        } catch (e: any) {
+            if (!isAuthError(e)) toast.error(explainError(e), "Falha ao trocar senha");
+        } finally {
+            setTrocandoSenha(false);
+        }
+    }
 
     const [busyUserId, setBusyUserId] = useState<number | null>(null);
     const [confirm, setConfirm] = useState<ConfirmState>(null);
@@ -129,6 +153,34 @@ export default function EquipeDetalhePage() {
         if (kind === "REMOVER") return doRemover(usuarioId);
     }
 
+    async function handleCompartilhar() {
+        if (!data) return;
+        const url = `${window.location.origin}/equipes/${data.id}`;
+        const title = `Equipe ${data.nome} · ClubeDoFut`;
+        const text = data.statusEquipe === "FECHADA"
+            ? `Entra na equipe "${data.nome}" no ClubeDoFut. Peça a senha ao admin.`
+            : `Entra na equipe "${data.nome}" no ClubeDoFut.`;
+
+        // tenta Web Share API (mobile + alguns browsers desktop)
+        const nav: any = window.navigator;
+        if (nav.share) {
+            try {
+                await nav.share({ title, text, url });
+                return;
+            } catch {
+                // usuário cancelou ou navegador falhou — cai pro fallback
+            }
+        }
+        // fallback: copia link pra área de transferência
+        try {
+            await navigator.clipboard.writeText(url);
+            toast.success("Link copiado pra área de transferência!");
+        } catch {
+            // último fallback: abre WhatsApp Web com o texto
+            window.open(`https://wa.me/?text=${encodeURIComponent(text + " " + url)}`, "_blank");
+        }
+    }
+
     async function handleEntrar() {
         if (!equipeId || !data) return;
         if (data.statusEquipe === "FECHADA") { setShowSenhaModal(true); return; }
@@ -218,7 +270,20 @@ export default function EquipeDetalhePage() {
                             </div>
                         </div>
                         <div className="x-phero-actions">
-                            <button className="x-btn ghost sm" onClick={() => load()}>Recarregar</button>
+                            <button
+                                className="x-btn ghost sm"
+                                onClick={handleCompartilhar}
+                                title="Compartilhar equipe"
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="18" cy="5" r="3" />
+                                    <circle cx="6" cy="12" r="3" />
+                                    <circle cx="18" cy="19" r="3" />
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                                </svg>
+                                Compartilhar
+                            </button>
                             {!souMembro && (
                                 <button className="x-btn" onClick={handleEntrar} disabled={loadingEntrar}>
                                     {loadingEntrar ? "..." : "Entrar na equipe"}
@@ -273,6 +338,33 @@ export default function EquipeDetalhePage() {
                                     <span>Criada em {criadoEm}</span>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* Administração (só admin + equipe fechada) */}
+                    {souAdmin && data.statusEquipe === "FECHADA" && (
+                        <div className="x-card" style={{ marginBottom: 20 }}>
+                            <div className="x-card-title">
+                                Administração
+                                <span className="x-pill accent">Admin</span>
+                            </div>
+                            <p className="x-card-sub">Gerencie configurações da equipe.</p>
+                            <hr className="x-divider" />
+                            <div className="x-logout-card" style={{ marginTop: 0, borderLeftColor: "var(--x-accent)" }}>
+                                <div>
+                                    <div className="x-logout-title">Trocar senha da equipe</div>
+                                    <div className="x-logout-sub">
+                                        Os membros atuais continuam entrando normalmente. Apenas novos convidados precisarão da nova senha.
+                                    </div>
+                                </div>
+                                <button className="x-btn" onClick={() => setShowTrocarSenha(true)}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" />
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                    </svg>
+                                    Trocar senha
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -360,6 +452,51 @@ export default function EquipeDetalhePage() {
                     </div>
                 </div>
             </main>
+
+            {/* Modal trocar senha da equipe */}
+            {showTrocarSenha && (
+                <div className="x-modal-overlay" onClick={() => { if (!trocandoSenha) setShowTrocarSenha(false); }}>
+                    <div className="x-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="x-eyebrow">Administração</div>
+                        <h3 className="x-modal-title" style={{ marginTop: 12 }}>
+                            Trocar senha
+                        </h3>
+                        <p className="x-modal-text">
+                            Defina uma nova senha pra equipe <b>{data.nome}</b>. Membros já admitidos
+                            não são afetados — só quem entrar depois precisará da nova senha.
+                        </p>
+                        <div className="x-field" style={{ marginBottom: 20 }}>
+                            <label>Nova senha</label>
+                            <input
+                                className="x-input x-masked"
+                                type="text"
+                                name="team-passcode"
+                                autoComplete="off"
+                                autoCorrect="off"
+                                autoCapitalize="none"
+                                spellCheck={false}
+                                data-lpignore="true"
+                                data-1p-ignore="true"
+                                data-bwignore="true"
+                                data-form-type="other"
+                                placeholder="Mínimo 4 caracteres"
+                                value={novaSenha}
+                                onChange={(e) => setNovaSenha(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleTrocarSenha()}
+                                autoFocus
+                            />
+                        </div>
+                        <div className="x-modal-actions">
+                            <button className="x-btn ghost" onClick={() => { setShowTrocarSenha(false); setNovaSenha(""); }} disabled={trocandoSenha}>
+                                Cancelar
+                            </button>
+                            <button className="x-btn" onClick={handleTrocarSenha} disabled={trocandoSenha || !novaSenha.trim()}>
+                                {trocandoSenha ? "Salvando..." : "Salvar nova senha"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal de senha */}
             {showSenhaModal && (
