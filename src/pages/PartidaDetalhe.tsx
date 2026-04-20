@@ -7,7 +7,6 @@ import {
 import { getEquipe } from "../services/equipe";
 import { api } from "../services/api";
 import AppHeader from "../components/AppHeader";
-import CountUp from "../components/CountUp";
 import { toast } from "../components/Toast";
 import { explainError, isAuthError } from "../utils/errors";
 
@@ -240,22 +239,25 @@ export default function PartidaDetalhePage() {
 
             <main className="x-app-main">
                 <div className="x-app-container">
-                    <div className="x-stats x-stagger" style={{ marginBottom: 24 }}>
-                        <div className="x-stat x-reveal">
-                            <div className="x-stat-lbl">Confirmados</div>
-                            <div className="x-stat-val"><em><CountUp to={confirmados} /></em></div>
+                    {/* Info compacta (antes eram 4 cards gigantes) */}
+                    <div className="x-meta-row" style={{ marginBottom: 28, border: 0, padding: 0 }}>
+                        <div className="x-meta-item">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                            </svg>
+                            <span>
+                                <strong style={{ color: "var(--x-accent)" }}>{confirmados}</strong>
+                                {vagas !== null && <> de {data.limiteParticipantes}</>} confirmado{confirmados !== 1 ? "s" : ""}
+                                {vagas !== null && vagas > 0 && <> · {vagas} vaga{vagas !== 1 ? "s" : ""}</>}
+                            </span>
                         </div>
-                        <div className="x-stat x-reveal">
-                            <div className="x-stat-lbl">Vagas</div>
-                            <div className="x-stat-val">{vagas === null ? "—" : <CountUp to={vagas} />}</div>
-                        </div>
-                        <div className="x-stat x-reveal">
-                            <div className="x-stat-lbl">Jogadores/Time</div>
-                            <div className="x-stat-val"><CountUp to={data.jogadoresPorTime} /></div>
-                        </div>
-                        <div className="x-stat x-reveal">
-                            <div className="x-stat-lbl">Limite</div>
-                            <div className="x-stat-val">{data.limiteParticipantes ? <CountUp to={data.limiteParticipantes} /> : "∞"}</div>
+                        <div className="x-meta-item">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" />
+                            </svg>
+                            <span>{data.jogadoresPorTime}×{data.jogadoresPorTime}</span>
                         </div>
                     </div>
 

@@ -7,16 +7,19 @@ import {
 } from "../services/equipePartidas";
 import { api } from "../services/api";
 import AppHeader from "../components/AppHeader";
-import CountUp from "../components/CountUp";
 import { toast } from "../components/Toast";
 import { explainError, isAuthError } from "../utils/errors";
 
 type EuResponse = { id: number; nome?: string; };
 
-function fmtDataHora(iso: string) {
+function fmtDateBox(iso: string): { dia: string; mes: string; hora: string; weekday: string } {
     const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleString("pt-BR");
+    if (Number.isNaN(d.getTime())) return { dia: "—", mes: "—", hora: "—", weekday: "—" };
+    const dia = String(d.getDate()).padStart(2, "0");
+    const mes = d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "").slice(0, 3).toUpperCase();
+    const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const weekday = d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "").toUpperCase();
+    return { dia, mes, hora, weekday };
 }
 function toLocalInputValue(d: Date) {
     const pad = (n: number) => String(n).padStart(2, "0");
@@ -89,17 +92,6 @@ export default function EquipePartidasPage() {
     const pageStart = (page - 1) * PAGE_SIZE;
     const pageEnd = Math.min(pageStart + PAGE_SIZE, totalPartidas);
     const partidasPaginadas = useMemo(() => partidas.slice(pageStart, pageEnd), [partidas, pageStart, pageEnd]);
-
-    const totalConfirmados = useMemo(() =>
-        (partidas ?? []).reduce((acc, p) => acc + Number((p as any).totalConfirmados ?? 0), 0), [partidas]);
-
-    const proximas = useMemo(() => {
-        const now = Date.now();
-        return (partidas ?? []).filter((p) => {
-            const t = new Date(p.dataHora).getTime();
-            return !Number.isNaN(t) && t >= now;
-        }).length;
-    }, [partidas]);
 
     async function onCriarPartida() {
         if (!equipeId) return;
@@ -181,27 +173,6 @@ export default function EquipePartidasPage() {
 
             <main className="x-app-main">
                 <div className="x-app-container">
-                    <div className="x-stats x-stagger" style={{ marginBottom: 32 }}>
-                        <div className="x-stat x-reveal">
-                            <div className="x-stat-lbl">Total de partidas</div>
-                            <div className="x-stat-val"><CountUp to={totalPartidas} /></div>
-                        </div>
-                        <div className="x-stat x-reveal">
-                            <div className="x-stat-lbl">Próximas</div>
-                            <div className="x-stat-val"><em><CountUp to={proximas} /></em></div>
-                        </div>
-                        <div className="x-stat x-reveal">
-                            <div className="x-stat-lbl">Confirmados (total)</div>
-                            <div className="x-stat-val"><CountUp to={totalConfirmados} /></div>
-                        </div>
-                        <div className="x-stat x-reveal">
-                            <div className="x-stat-lbl">Status</div>
-                            <div className="x-stat-val" style={{ fontSize: 14 }}>
-                                {souAdmin ? "Admin" : "Só leitura"}
-                            </div>
-                        </div>
-                    </div>
-
                     {/* Criar (só admin) */}
                     {showCreate && souAdmin && (
                         <div className="x-card pad-lg" style={{ marginBottom: 32 }}>
@@ -315,29 +286,26 @@ export default function EquipePartidasPage() {
                                 const ts = new Date(p.dataHora).getTime();
                                 const now = Date.now();
                                 const isFuture = !Number.isNaN(ts) && ts >= now;
+                                const { dia, mes, hora, weekday } = fmtDateBox(p.dataHora);
 
                                 return (
                                     <button key={p.id} className="x-list-item" onClick={() => nav(`/partidas/${p.id}`)}>
-                                        <div className="x-avatar sm">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                                <rect x="3" y="4" width="18" height="18" rx="2" />
-                                                <line x1="16" y1="2" x2="16" y2="6" />
-                                                <line x1="8" y1="2" x2="8" y2="6" />
-                                            </svg>
+                                        <div className={`x-date-box ${isFuture ? "future" : ""}`}>
+                                            <span className="x-date-box-day">{dia}</span>
+                                            <span className="x-date-box-month">{mes}</span>
                                         </div>
                                         <div className="x-list-item-main">
-                                            <div className="x-list-item-title" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                                {isFuture ? "Próxima partida" : "Partida anterior"}
-                                                {isFuture ? (
-                                                    <span className="x-pill accent">{p.statusPartida}</span>
-                                                ) : (
-                                                    <span className="x-pill">{p.statusPartida}</span>
-                                                )}
+                                            <div className="x-list-item-title">
+                                                {weekday} · {hora}
                                             </div>
                                             <div className="x-list-item-sub">
-                                                <span>{fmtDataHora(p.dataHora)}</span>
+                                                <span>{p.totalConfirmados} confirmado{p.totalConfirmados !== 1 ? "s" : ""}</span>
                                                 <span className="sep">·</span>
-                                                <span>{p.totalConfirmados} confirmados</span>
+                                                {isFuture ? (
+                                                    <span className="x-pill accent" style={{ padding: "3px 8px", fontSize: 9 }}>Próxima</span>
+                                                ) : (
+                                                    <span className="x-pill" style={{ padding: "3px 8px", fontSize: 9 }}>Histórico</span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="x-list-item-right">
