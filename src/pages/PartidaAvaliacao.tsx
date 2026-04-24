@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../services/api";
-import { getPartida, enviarAvaliacoesTimes } from "../services/partidas";
+import { getPartida, enviarAvaliacoesJogadores } from "../services/partidas";
 import AppHeader from "../components/AppHeader";
 import StarRating from "../components/StarRating";
 import { toast } from "../components/Toast";
@@ -38,6 +38,12 @@ function fmtDataHora(iso?: string) {
     return { dia, hora };
 }
 
+type JogadorAvaliavel = {
+    usuarioId: number;
+    nome: string;
+    timeNumero: number | null; // null = reserva
+};
+
 export default function PartidaAvaliacaoPage() {
     const nav = useNavigate();
     const { partidaId } = useParams();
@@ -48,9 +54,9 @@ export default function PartidaAvaliacaoPage() {
     const [meuId, setMeuId] = useState<number | null>(null);
 
     const [jaEnviouAvaliacao, setJaEnviouAvaliacao] = useState(false);
-    const [notasPorTime, setNotasPorTime] = useState<Record<string, number>>({});
+    const [notasPorUsuario, setNotasPorUsuario] = useState<Record<number, number>>({});
     const [sending, setSending] = useState(false);
-    const [tab, setTab] = useState<string>("");
+    const [currentIdx, setCurrentIdx] = useState(0);
 
     async function loadPartida() {
         if (!partidaId) { setGateErr("ID de partida ausente."); return; }
@@ -92,64 +98,61 @@ export default function PartidaAvaliacaoPage() {
 
     const { dia, hora } = useMemo(() => fmtDataHora(data?.dataHora), [data?.dataHora]);
 
-    const times = useMemo(() => {
-        const list = data?.timesGerados?.times ?? [];
-        return list.map((t) => ({ numero: t.numero, alvoId: `TIME_${t.numero}`, jogadores: t.jogadores ?? [] }));
-    }, [data?.timesGerados]);
+    // Todos os jogadores (times + reservas), menos eu mesmo
+    const jogadores = useMemo((): JogadorAvaliavel[] => {
+        if (!data?.timesGerados) return [];
+        const list: JogadorAvaliavel[] = [];
+        (data.timesGerados.times ?? []).forEach((t) => {
+            (t.jogadores ?? []).forEach((j) => {
+                list.push({ usuarioId: j.usuarioId, nome: j.nome, timeNumero: t.numero });
+            });
+        });
+        (data.timesGerados.reservas ?? []).forEach((r) => {
+            list.push({ usuarioId: r.usuarioId, nome: r.nome, timeNumero: null });
+        });
+        return list.filter((j) => j.usuarioId !== meuId);
+    }, [data?.timesGerados, meuId]);
 
-    useEffect(() => {
-        if (!tab && times.length > 0) setTab(times[0].alvoId);
-    }, [tab, times]);
+    const currentJogador = jogadores[currentIdx] ?? null;
+    const notaLocal = currentJogador ? (notasPorUsuario[currentJogador.usuarioId] ?? 0) : 0;
 
-    const timeSelecionado = useMemo(() => times.find((t) => t.alvoId === tab) ?? null, [times, tab]);
-    const notaLocal = tab ? (notasPorTime[tab] ?? 0) : 0;
-
-    function setNotaTime(alvoId: string, n: number) {
+    function setNotaJogador(usuarioId: number, n: number) {
         if (jaEnviouAvaliacao) return;
-        setNotasPorTime((prev) => ({ ...prev, [alvoId]: clampInt(n, 0, 10) }));
+        setNotasPorUsuario((prev) => ({ ...prev, [usuarioId]: clampInt(n, 0, 10) }));
     }
 
-    const faltandoTimes = useMemo(() => {
-        const missing: { alvoId: string; numero: number }[] = [];
-        for (const t of times) {
-            const has = Object.prototype.hasOwnProperty.call(notasPorTime, t.alvoId);
-            if (!has) missing.push({ alvoId: t.alvoId, numero: t.numero });
-        }
-        return missing;
-    }, [times, notasPorTime]);
+    const faltando = useMemo(() => {
+        return jogadores.filter((j) => !Object.prototype.hasOwnProperty.call(notasPorUsuario, j.usuarioId));
+    }, [jogadores, notasPorUsuario]);
 
     const podeInteragir = !!data && !gateErr && !jaEnviouAvaliacao;
+    const allRated = faltando.length === 0 && jogadores.length > 0;
 
     async function onEnviar() {
         if (!partidaId) return;
         if (jaEnviouAvaliacao) { toast.warn("Você já enviou sua avaliação."); return; }
         if (!data) { toast.warn("Partida não carregada."); return; }
         if (data.statusPartida !== "AVALIACAO_LIBERADA") { toast.warn(`Avaliação não liberada (status: ${data.statusPartida}).`); return; }
-        if (!data.timesGerados || times.length === 0) { toast.warn("Times ainda não foram gerados."); return; }
-        if (faltandoTimes.length > 0) {
-            toast.warn(`Faltou avaliar: ${faltandoTimes.map((t) => `Time ${t.numero}`).join(", ")}`);
+        if (jogadores.length === 0) { toast.warn("Nenhum jogador pra avaliar."); return; }
+        if (faltando.length > 0) {
+            toast.warn(`Faltou avaliar ${faltando.length} jogador(es).`);
             return;
         }
 
-        const payload = times.map((t) => ({
-            tipoAlvo: "TIME" as const,
-            alvoId: t.alvoId,
-            nota: clampInt(notasPorTime[t.alvoId], 0, 10),
+        const payload = jogadores.map((j) => ({
+            usuarioId: j.usuarioId,
+            nota: clampInt(notasPorUsuario[j.usuarioId], 0, 10),
         }));
 
         try {
             setSending(true);
-            await enviarAvaliacoesTimes(partidaId, payload);
+            await enviarAvaliacoesJogadores(partidaId, payload);
             toast.success("Avaliação enviada. Obrigado!", "Pronto");
             if (meuId != null) {
                 localStorage.setItem(sentKey(partidaId, meuId), "1");
                 setJaEnviouAvaliacao(true);
             }
-            // redireciona pra tela da equipe após curta pausa pra o usuário ver o toast
-            setTimeout(() => {
-                if (data?.equipeId) nav(`/equipes/${data.equipeId}`, { replace: true });
-                else nav(-1);
-            }, 900);
+            setTimeout(() => nav(`/equipes/${data.equipeId}`), 900);
         } catch (e: any) {
             if (!isAuthError(e)) toast.error(explainError(e), "Falha ao enviar avaliação");
         }
@@ -166,6 +169,28 @@ export default function PartidaAvaliacaoPage() {
     }
     if (!data) return null;
 
+    const isLast = currentIdx >= jogadores.length - 1;
+    const isFirst = currentIdx <= 0;
+    const currentRated = !!currentJogador && typeof notasPorUsuario[currentJogador.usuarioId] === "number";
+    const progress = jogadores.length ? ((jogadores.length - faltando.length) / jogadores.length) * 100 : 0;
+
+    function goPrev() { if (!isFirst) setCurrentIdx((i) => i - 1); }
+    function goNextOrSend() {
+        if (!currentRated && !jaEnviouAvaliacao) {
+            toast.warn("Dê uma nota antes de avançar.");
+            return;
+        }
+        if (!isLast) {
+            setCurrentIdx((i) => i + 1);
+            return;
+        }
+        if (!allRated) {
+            const missingIdx = jogadores.findIndex((j) => !Object.prototype.hasOwnProperty.call(notasPorUsuario, j.usuarioId));
+            if (missingIdx >= 0) { setCurrentIdx(missingIdx); return; }
+        }
+        onEnviar();
+    }
+
     return (
         <div className="x-app">
             <AppHeader />
@@ -175,14 +200,13 @@ export default function PartidaAvaliacaoPage() {
                     <button className="x-phero-back" onClick={() => nav(-1)}>← Voltar</button>
                     <div className="x-phero-grid">
                         <div>
-                            <div className="x-eyebrow">Avaliar times</div>
+                            <div className="x-eyebrow">Avaliar jogadores</div>
                             <h1 className="x-phero-title" style={{ marginTop: 12 }}>
                                 {dia}
                             </h1>
                             <div className="x-meta" style={{ marginBottom: 18 }}>Horário: {hora}</div>
                             <div className="x-phero-meta">
                                 <span className="x-pill">{data.statusPartida}</span>
-                                <span className="x-pill">{data.politicaInscricao}</span>
                                 {jaEnviouAvaliacao ? (
                                     <span className="x-pill warning">Enviado (bloqueado)</span>
                                 ) : (
@@ -214,138 +238,101 @@ export default function PartidaAvaliacaoPage() {
                             <div>
                                 <span className="x-alert-title">Avaliação enviada</span>
                                 <span className="x-alert-text">
-                                    Você já enviou sua avaliação. As notas ficam bloqueadas neste dispositivo.
+                                    Suas notas ficam bloqueadas neste dispositivo.
                                 </span>
                             </div>
                         </div>
                     )}
 
-                    {/* Wizard: um time por vez */}
-                    {(() => {
-                        const currentIndex = Math.max(0, times.findIndex((t) => t.alvoId === tab));
-                        const isLast = currentIndex >= times.length - 1;
-                        const isFirst = currentIndex <= 0;
-                        const currentRated = typeof notasPorTime[tab] === "number";
-                        const allRated = faltandoTimes.length === 0;
-                        const progress = times.length
-                            ? ((times.length - faltandoTimes.length) / times.length) * 100
-                            : 0;
+                    {!gateErr && jogadores.length === 0 && !jaEnviouAvaliacao && (
+                        <div className="x-empty">
+                            <h3 className="x-empty-title">Ninguém pra avaliar</h3>
+                            <p className="x-empty-text">Você é o único jogador confirmado nesta partida.</p>
+                        </div>
+                    )}
 
-                        function goPrev() {
-                            if (isFirst) return;
-                            setTab(times[currentIndex - 1].alvoId);
-                        }
-                        function goNextOrSend() {
-                            if (!currentRated) {
-                                toast.warn("Dê uma nota antes de avançar.");
-                                return;
-                            }
-                            if (!isLast) {
-                                setTab(times[currentIndex + 1].alvoId);
-                                return;
-                            }
-                            // último time — envia
-                            if (!allRated) {
-                                // pula pro primeiro time ainda não avaliado
-                                const missing = faltandoTimes[0];
-                                if (missing) { setTab(missing.alvoId); return; }
-                            }
-                            onEnviar();
-                        }
-
-                        return (
-                            <div className="x-wizard x-reveal">
-                                {/* Stepper */}
-                                <div className="x-wizard-head">
-                                    <div className="x-wizard-step-label">
-                                        Time <strong>{currentIndex + 1}</strong> de <strong>{times.length}</strong>
-                                    </div>
-                                    <div className="x-wizard-dots">
-                                        {times.map((t, i) => {
-                                            const has = typeof notasPorTime[t.alvoId] === "number";
-                                            const cur = i === currentIndex;
-                                            return (
-                                                <button
-                                                    key={t.alvoId}
-                                                    type="button"
-                                                    className={`x-wizard-dot ${cur ? "cur" : ""} ${has ? "has" : ""}`}
-                                                    onClick={() => setTab(t.alvoId)}
-                                                    aria-label={`Ir para Time ${t.numero}`}
-                                                />
-                                            );
-                                        })}
-                                    </div>
+                    {jogadores.length > 0 && (
+                        <div className="x-wizard x-reveal">
+                            {/* Stepper */}
+                            <div className="x-wizard-head">
+                                <div className="x-wizard-step-label">
+                                    Jogador <strong>{currentIdx + 1}</strong> de <strong>{jogadores.length}</strong>
                                 </div>
-
-                                {/* Progress bar */}
-                                <div className="x-progress" aria-hidden>
-                                    <div className="x-progress-fill" style={{ width: `${progress}%` }} />
+                                <div className="x-wizard-dots">
+                                    {jogadores.map((j, i) => {
+                                        const has = typeof notasPorUsuario[j.usuarioId] === "number";
+                                        const cur = i === currentIdx;
+                                        return (
+                                            <button
+                                                key={j.usuarioId}
+                                                type="button"
+                                                className={`x-wizard-dot ${cur ? "cur" : ""} ${has ? "has" : ""}`}
+                                                onClick={() => setCurrentIdx(i)}
+                                                aria-label={`Ir para ${j.nome}`}
+                                            />
+                                        );
+                                    })}
                                 </div>
+                            </div>
 
-                                {/* Team card */}
-                                {timeSelecionado && (
-                                    <div className="x-wizard-card">
-                                        <div className="x-wizard-team">
-                                            <div className="x-avatar lg">T{timeSelecionado.numero}</div>
-                                            <div>
-                                                <h3 className="x-wizard-team-name">Time {timeSelecionado.numero}</h3>
-                                                <div className="x-wizard-team-sub">
-                                                    {timeSelecionado.jogadores.length} jogador{timeSelecionado.jogadores.length !== 1 ? "es" : ""}
-                                                </div>
+                            <div className="x-progress" aria-hidden>
+                                <div className="x-progress-fill" style={{ width: `${progress}%` }} />
+                            </div>
+
+                            {currentJogador && (
+                                <div className="x-wizard-card">
+                                    <div className="x-wizard-team">
+                                        <div className="x-avatar lg">
+                                            {String(currentJogador.nome || "?").trim().charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <h3 className="x-wizard-team-name">{currentJogador.nome}</h3>
+                                            <div className="x-wizard-team-sub">
+                                                {currentJogador.timeNumero != null
+                                                    ? `Time ${currentJogador.timeNumero}`
+                                                    : "Reserva"}
                                             </div>
                                         </div>
-
-                                        <div className="x-wizard-roster">
-                                            {timeSelecionado.jogadores.map((j) => (
-                                                <div key={j.usuarioId} className="x-wizard-player">
-                                                    <div className="x-avatar sm teal">
-                                                        {String(j.nome || "?").trim().charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <span>{j.nome}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <div className="x-wizard-rating">
-                                            <div className="x-wizard-rating-label">Qual nota para este time?</div>
-                                            <StarRating
-                                                value={notaLocal}
-                                                onChange={(v) => setNotaTime(timeSelecionado.alvoId, v)}
-                                                disabled={!podeInteragir}
-                                            />
-                                        </div>
                                     </div>
-                                )}
 
-                                {/* Nav buttons */}
-                                <div className="x-wizard-nav">
-                                    <button
-                                        className="x-btn ghost"
-                                        onClick={goPrev}
-                                        disabled={isFirst}
-                                    >
-                                        ← Anterior
-                                    </button>
-                                    <button
-                                        className="x-btn"
-                                        onClick={goNextOrSend}
-                                        disabled={!podeInteragir || sending || (isLast && !currentRated)}
-                                    >
-                                        {sending
-                                            ? "Enviando..."
-                                            : isLast && allRated
-                                                ? "Enviar avaliação"
-                                                : "Próximo"}
-                                        <span className="x-btn-arr">→</span>
-                                    </button>
+                                    <div className="x-wizard-rating">
+                                        <div className="x-wizard-rating-label">Como foi a atuação deste jogador?</div>
+                                        <StarRating
+                                            value={notaLocal}
+                                            onChange={(v) => setNotaJogador(currentJogador.usuarioId, v)}
+                                            disabled={!podeInteragir}
+                                        />
+                                    </div>
                                 </div>
+                            )}
 
-                                <p className="x-wizard-fine">
-                                    Ao enviar, suas notas ficam registradas e o site bloqueia nova edição neste dispositivo.
-                                </p>
+                            <div className="x-wizard-nav">
+                                <button
+                                    className="x-btn ghost"
+                                    onClick={goPrev}
+                                    disabled={isFirst}
+                                >
+                                    ← Anterior
+                                </button>
+                                <button
+                                    className="x-btn"
+                                    onClick={goNextOrSend}
+                                    disabled={!podeInteragir || sending || (isLast && !currentRated)}
+                                >
+                                    {sending
+                                        ? "Enviando..."
+                                        : isLast && allRated
+                                            ? "Enviar avaliação"
+                                            : "Próximo"}
+                                    <span className="x-btn-arr">→</span>
+                                </button>
                             </div>
-                        );
-                    })()}
+
+                            <p className="x-wizard-fine">
+                                Suas notas ficam registradas e o site bloqueia nova edição neste dispositivo.
+                            </p>
+                        </div>
+                    )}
                 </div>
             </main>
         </div>

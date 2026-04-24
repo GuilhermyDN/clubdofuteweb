@@ -26,25 +26,29 @@ export async function liberarAvaliacao(partidaId: string | number) {
   return data;
 }
 
-export async function enviarAvaliacoes(partidaId: string | number, avaliacoes: any[]) {
-  const { data } = await api.post(`/partidas/${partidaId}/avaliacoes`, avaliacoes);
-  return data;
-}
-
 export async function encerrarAvaliacao(partidaId: string | number) {
   const { data } = await api.post(`/partidas/${partidaId}/encerrar-avaliacao`);
   return data;
 }
 
-export async function enviarAvaliacoesTimes(
+/**
+ * Envia avaliações dos jogadores. O backend espera:
+ *   POST /partidas/{id}/avaliacoes
+ *   body: { avaliacoes: [{ usuarioId, nota }, ...] }
+ */
+export async function enviarAvaliacoesJogadores(
   partidaId: string | number,
-  avaliacoes: Array<{ tipoAlvo: "TIME"; alvoId: string; nota: number }>
+  avaliacoes: Array<{ usuarioId: number; nota: number }>
 ) {
   const { data } = await api.post(`/partidas/${partidaId}/avaliacoes`, {
     avaliacoes,
   });
   return data;
 }
+
+/** @deprecated mantido por compat; usa enviarAvaliacoesJogadores */
+export const enviarAvaliacoesTimes = enviarAvaliacoesJogadores as any;
+export const enviarAvaliacoes = enviarAvaliacoesJogadores as any;
 
 export async function getAvaliacoesPartida(partidaId: string | number) {
   const { data } = await api.get(`/partidas/${partidaId}/avaliacoes`);
