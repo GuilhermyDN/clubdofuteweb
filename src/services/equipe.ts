@@ -72,3 +72,20 @@ export async function listarMinhasEquipes(): Promise<EquipeResumo[]> {
   const res = await api.get("/eu/equipes");
   return res.data as EquipeResumo[];
 }
+
+export type AtualizarEquipeBody = Partial<{
+  nome: string;
+  cepOuLocal: string;
+  esporte: Esporte;
+  statusEquipe: StatusEquipe;
+  diasHorariosPadrao: string;
+}>;
+
+export async function atualizarEquipe(equipeId: string | number, body: AtualizarEquipeBody): Promise<EquipeDetalhe> {
+  const res = await api.put(`/equipes/${equipeId}`, body);
+  return res.data as EquipeDetalhe;
+}
+
+export async function deletarEquipe(equipeId: string | number): Promise<void> {
+  await api.delete(`/equipes/${equipeId}`);
+}

@@ -158,9 +158,22 @@ export default function Login() {
                         </div>
                     </div>
 
-                    <div className="x-auth-help">
-                        Esqueceu a senha? A recuperação é feita via telefone.
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => nav("/recuperar-senha")}
+                        style={{
+                            background: "transparent",
+                            border: 0,
+                            padding: "0 0 18px",
+                            color: "var(--x-text-2)",
+                            fontSize: 12,
+                            cursor: "pointer",
+                            textAlign: "left",
+                            fontFamily: "inherit",
+                        }}
+                    >
+                        <u style={{ color: "var(--x-accent)", textUnderlineOffset: 3 }}>Esqueci minha senha</u>
+                    </button>
 
                     <button type="submit" className="x-btn block lg" disabled={loading}>
                         {loading ? "Entrando..." : "Entrar"} <span className="x-btn-arr">→</span>

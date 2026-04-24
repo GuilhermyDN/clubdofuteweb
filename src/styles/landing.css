@@ -1736,6 +1736,32 @@ body {
     box-shadow: 0 0 10px var(--x-accent);
 }
 
+/* Badge de notificação (convites pendentes) */
+.x-nav-badge {
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: 6px;
+    background: var(--x-accent);
+    color: var(--x-accent-ink);
+    border-radius: var(--x-r-pill);
+    font-family: var(--x-font);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+.x-nav-badge.floating {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    margin-left: 0;
+    box-shadow: 0 0 0 2px var(--x-bg);
+    animation: xPulse 2s ease-in-out infinite;
+}
+.x-app-iconlink { position: relative; }
+
 /* App actions (Sair, avatar link) — sempre visível */
 .x-app-actions {
     display: flex;

@@ -19,12 +19,19 @@ export function explainError(e: any): string {
     }
 
     // extrai mensagem do backend
-    const backendMsg =
+    const rawMsg =
         (typeof data?.mensagem === "string" && data.mensagem) ||
         (typeof data?.message === "string" && data.message) ||
         (typeof data?.error === "string" && data.error) ||
         (Array.isArray(data?.errors) && data.errors.map((x: any) => x?.message || x).join(", ")) ||
         null;
+
+    // Spring Boot "No static resource X" = endpoint não existe (ou está em implementação).
+    // Deixa amigável em vez de vazar o detalhe técnico pro usuário.
+    const backendMsg =
+        rawMsg && /No static resource/i.test(rawMsg)
+            ? "Esse recurso ainda não está disponível."
+            : rawMsg;
 
     // mapa amigável por status
     const byStatus: Record<number, string> = {
@@ -48,4 +55,14 @@ export function explainError(e: any): string {
 export function isAuthError(e: any): boolean {
     const s = e?.response?.status;
     return s === 401 || s === 403;
+}
+
+/**
+ * Retorna true se o endpoint ainda não existe no backend (Spring responde 500
+ * com mensagem "No static resource X" ou 404). Útil pra mostrar estado "em breve".
+ */
+export function isNotImplemented(e: any): boolean {
+    const s = e?.response?.status;
+    const msg = String(e?.response?.data?.mensagem || e?.response?.data?.message || "");
+    return s === 404 || /No static resource/i.test(msg);
 }

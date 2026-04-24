@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { getEquipe, entrarEquipeAberta, entrarEquipeFechada, trocarSenhaEquipe } from "../services/equipe";
+import { getEquipe, entrarEquipeAberta, entrarEquipeFechada, trocarSenhaEquipe, atualizarEquipe, deletarEquipe } from "../services/equipe";
+import type { Esporte, StatusEquipe } from "../services/equipe";
 import { getEu } from "../services/eu";
 import { promoverAdmin, rebaixarMembro, removerMembro } from "../services/membrosEquipe";
 import type { EquipeDetalhe } from "../services/equipe";
@@ -42,6 +43,64 @@ export default function EquipeDetalhePage() {
     const [showTrocarSenha, setShowTrocarSenha] = useState(false);
     const [novaSenha, setNovaSenha] = useState("");
     const [trocandoSenha, setTrocandoSenha] = useState(false);
+
+    // modal editar equipe (admin)
+    const [showEditar, setShowEditar] = useState(false);
+    const [editForm, setEditForm] = useState({
+        nome: "", cepOuLocal: "", esporte: "VOLEI" as Esporte,
+        statusEquipe: "ABERTA" as StatusEquipe, diasHorariosPadrao: "",
+    });
+    const [salvandoEdit, setSalvandoEdit] = useState(false);
+
+    // confirmação de excluir equipe
+    const [showDeletar, setShowDeletar] = useState(false);
+    const [deletando, setDeletando] = useState(false);
+
+    function abrirEditar() {
+        if (!data) return;
+        setEditForm({
+            nome: data.nome,
+            cepOuLocal: data.cepOuLocal,
+            esporte: data.esporte,
+            statusEquipe: data.statusEquipe,
+            diasHorariosPadrao: data.diasHorariosPadrao ?? "",
+        });
+        setShowEditar(true);
+    }
+
+    async function handleSalvarEdicao() {
+        if (!equipeId) return;
+        const body = {
+            nome: editForm.nome.trim(),
+            cepOuLocal: editForm.cepOuLocal.trim(),
+            esporte: editForm.esporte,
+            statusEquipe: editForm.statusEquipe,
+            diasHorariosPadrao: editForm.diasHorariosPadrao.trim(),
+        };
+        if (!body.nome) { toast.warn("Nome é obrigatório."); return; }
+        if (!body.cepOuLocal) { toast.warn("Local é obrigatório."); return; }
+        try {
+            setSalvandoEdit(true);
+            await atualizarEquipe(equipeId, body);
+            toast.success("Equipe atualizada.");
+            setShowEditar(false);
+            await load();
+        } catch (e: any) {
+            if (!isAuthError(e)) toast.error(explainError(e), "Falha ao salvar");
+        } finally { setSalvandoEdit(false); }
+    }
+
+    async function handleDeletar() {
+        if (!equipeId) return;
+        try {
+            setDeletando(true);
+            await deletarEquipe(equipeId);
+            toast.success("Equipe deletada.");
+            nav("/equipes");
+        } catch (e: any) {
+            if (!isAuthError(e)) toast.error(explainError(e), "Falha ao deletar");
+        } finally { setDeletando(false); setShowDeletar(false); }
+    }
 
     async function handleTrocarSenha() {
         if (!equipeId) return;
@@ -341,8 +400,8 @@ export default function EquipeDetalhePage() {
                         </div>
                     )}
 
-                    {/* Administração (só admin + equipe fechada) */}
-                    {souAdmin && data.statusEquipe === "FECHADA" && (
+                    {/* Administração (só admin) */}
+                    {souAdmin && (
                         <div className="x-card" style={{ marginBottom: 20 }}>
                             <div className="x-card-title">
                                 Administração
@@ -350,20 +409,57 @@ export default function EquipeDetalhePage() {
                             </div>
                             <p className="x-card-sub">Gerencie configurações da equipe.</p>
                             <hr className="x-divider" />
-                            <div className="x-logout-card" style={{ marginTop: 0, borderLeftColor: "var(--x-accent)" }}>
-                                <div>
-                                    <div className="x-logout-title">Trocar senha da equipe</div>
-                                    <div className="x-logout-sub">
-                                        Os membros atuais continuam entrando normalmente. Apenas novos convidados precisarão da nova senha.
+
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                <div className="x-logout-card" style={{ marginTop: 0, borderLeftColor: "var(--x-accent)" }}>
+                                    <div>
+                                        <div className="x-logout-title">Editar dados da equipe</div>
+                                        <div className="x-logout-sub">
+                                            Atualize nome, local, esporte ou agenda padrão.
+                                        </div>
                                     </div>
+                                    <button className="x-btn" onClick={abrirEditar}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                        </svg>
+                                        Editar
+                                    </button>
                                 </div>
-                                <button className="x-btn" onClick={() => setShowTrocarSenha(true)}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                        <rect x="3" y="11" width="18" height="11" rx="2" />
-                                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                                    </svg>
-                                    Trocar senha
-                                </button>
+
+                                {data.statusEquipe === "FECHADA" && (
+                                    <div className="x-logout-card" style={{ marginTop: 0, borderLeftColor: "var(--x-accent)" }}>
+                                        <div>
+                                            <div className="x-logout-title">Trocar senha da equipe</div>
+                                            <div className="x-logout-sub">
+                                                Membros atuais continuam entrando. Só novos convidados precisarão da nova senha.
+                                            </div>
+                                        </div>
+                                        <button className="x-btn" onClick={() => setShowTrocarSenha(true)}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                                <rect x="3" y="11" width="18" height="11" rx="2" />
+                                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                            </svg>
+                                            Trocar senha
+                                        </button>
+                                    </div>
+                                )}
+
+                                <div className="x-logout-card" style={{ marginTop: 0 }}>
+                                    <div>
+                                        <div className="x-logout-title" style={{ color: "var(--x-danger)" }}>Deletar equipe</div>
+                                        <div className="x-logout-sub">
+                                            Ação permanente. Todos os membros serão removidos e o histórico de partidas apagado.
+                                        </div>
+                                    </div>
+                                    <button className="x-btn danger" onClick={() => setShowDeletar(true)}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="3 6 5 6 21 6" />
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                        </svg>
+                                        Deletar
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -452,6 +548,95 @@ export default function EquipeDetalhePage() {
                     </div>
                 </div>
             </main>
+
+            {/* Modal editar equipe */}
+            {showEditar && (
+                <div className="x-modal-overlay" onClick={() => { if (!salvandoEdit) setShowEditar(false); }}>
+                    <div className="x-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="x-eyebrow">Administração</div>
+                        <h3 className="x-modal-title" style={{ marginTop: 12 }}>Editar equipe</h3>
+                        <p className="x-modal-text">Atualize as informações visíveis pros membros e convidados.</p>
+
+                        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 20 }}>
+                            <div className="x-field">
+                                <label>Nome</label>
+                                <input
+                                    className="x-input"
+                                    value={editForm.nome}
+                                    onChange={(e) => setEditForm((p) => ({ ...p, nome: e.target.value }))}
+                                />
+                            </div>
+                            <div className="x-field">
+                                <label>Local</label>
+                                <input
+                                    className="x-input"
+                                    value={editForm.cepOuLocal}
+                                    onChange={(e) => setEditForm((p) => ({ ...p, cepOuLocal: e.target.value }))}
+                                />
+                            </div>
+                            <div className="x-form-grid">
+                                <div className="x-field">
+                                    <label>Esporte</label>
+                                    <select
+                                        className="x-select"
+                                        value={editForm.esporte}
+                                        onChange={(e) => setEditForm((p) => ({ ...p, esporte: e.target.value as Esporte }))}
+                                    >
+                                        <option value="VOLEI">Vôlei</option>
+                                        <option value="FUTEVOLEI">Futevôlei</option>
+                                    </select>
+                                </div>
+                                <div className="x-field">
+                                    <label>Status</label>
+                                    <select
+                                        className="x-select"
+                                        value={editForm.statusEquipe}
+                                        onChange={(e) => setEditForm((p) => ({ ...p, statusEquipe: e.target.value as StatusEquipe }))}
+                                    >
+                                        <option value="ABERTA">Aberta</option>
+                                        <option value="FECHADA">Fechada</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="x-field">
+                                <label>Agenda padrão</label>
+                                <input
+                                    className="x-input"
+                                    placeholder="ex: sabado-09:00,quarta-19:00"
+                                    value={editForm.diasHorariosPadrao}
+                                    onChange={(e) => setEditForm((p) => ({ ...p, diasHorariosPadrao: e.target.value }))}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="x-modal-actions">
+                            <button className="x-btn ghost" onClick={() => setShowEditar(false)} disabled={salvandoEdit}>Cancelar</button>
+                            <button className="x-btn" onClick={handleSalvarEdicao} disabled={salvandoEdit}>
+                                {salvandoEdit ? "Salvando..." : "Salvar alterações"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal confirmar deletar */}
+            {showDeletar && (
+                <div className="x-modal-overlay" onClick={() => { if (!deletando) setShowDeletar(false); }}>
+                    <div className="x-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="x-eyebrow" style={{ color: "var(--x-danger)" }}>Ação permanente</div>
+                        <h3 className="x-modal-title" style={{ marginTop: 12 }}>Deletar equipe?</h3>
+                        <p className="x-modal-text">
+                            A equipe <b>{data.nome}</b> será apagada permanentemente, junto com todos os membros e partidas. Essa ação <b>não pode ser desfeita</b>.
+                        </p>
+                        <div className="x-modal-actions">
+                            <button className="x-btn ghost" onClick={() => setShowDeletar(false)} disabled={deletando}>Cancelar</button>
+                            <button className="x-btn danger" onClick={handleDeletar} disabled={deletando}>
+                                {deletando ? "Deletando..." : "Sim, deletar"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal trocar senha da equipe */}
             {showTrocarSenha && (
