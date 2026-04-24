@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { CriarEquipeBody, EquipeDetalhe, EquipeResumo, Esporte, StatusEquipe } from "../services/equipe";
 import {
@@ -74,6 +74,17 @@ export default function EquipesPage() {
     const [creating, setCreating] = useState(false);
     const showSenha = create.statusEquipe === "FECHADA";
     const [showCreate, setShowCreate] = useState(false);
+    const createFormRef = useRef<HTMLDivElement>(null);
+
+    function abrirFormularioCriar() {
+        setShowCreate(true);
+        // scroll suave até o form no próximo frame (depois do render)
+        requestAnimationFrame(() => {
+            createFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            const firstInput = createFormRef.current?.querySelector<HTMLInputElement>("input, select, textarea");
+            firstInput?.focus({ preventScroll: true });
+        });
+    }
 
     function setCreateField<K extends keyof CriarEquipeBody>(k: K, v: CriarEquipeBody[K]) {
         setCreate((p) => ({ ...p, [k]: v }));
@@ -203,7 +214,10 @@ export default function EquipesPage() {
                             <h2 className="x-h3">Suas equipes</h2>
                             <p className="x-page-sub">Participe de rachões ou crie o seu próprio clube.</p>
                         </div>
-                        <button className="x-btn" onClick={() => setShowCreate(v => !v)}>
+                        <button
+                            className="x-btn"
+                            onClick={() => (showCreate ? setShowCreate(false) : abrirFormularioCriar())}
+                        >
                             {showCreate ? "Fechar" : "Nova equipe"} {!showCreate && <span className="x-btn-arr">+</span>}
                         </button>
                     </div>
@@ -214,7 +228,7 @@ export default function EquipesPage() {
 
                     {/* CRIAR equipe (collapsible) */}
                     {showCreate && (
-                        <div className="x-card pad-lg" style={{ marginBottom: 32 }}>
+                        <div ref={createFormRef} className="x-card pad-lg" style={{ marginBottom: 32, scrollMarginTop: 80 }}>
                             <div className="x-card-title">Criar equipe</div>
                             <hr className="x-divider" />
 
@@ -431,7 +445,7 @@ export default function EquipesPage() {
                                         : "Carregando..."}
                                 </p>
                                 {!q.trim() && searchedOnce && (
-                                    <button className="x-btn sm" onClick={() => setShowCreate(true)}>
+                                    <button className="x-btn sm" onClick={abrirFormularioCriar}>
                                         Criar equipe <span className="x-btn-arr">+</span>
                                     </button>
                                 )}

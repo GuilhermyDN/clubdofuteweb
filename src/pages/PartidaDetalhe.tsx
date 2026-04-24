@@ -26,6 +26,7 @@ type PartidaDetalhe = {
     criadoEm: string;
     presencas: Presenca[];
     timesGerados: TimesGerados | null;
+    mvpUsuarioId?: number | null;
 };
 
 type EuResponse = { id: number; nome?: string };
@@ -118,6 +119,25 @@ export default function PartidaDetalhePage() {
     const estouConfirmado = minhaPresenca?.statusPresenca === "CONFIRMADO";
     const limite = data?.limiteParticipantes ?? 0;
     const vagas = useMemo(() => (limite > 0 ? Math.max(0, limite - confirmados) : null), [limite, confirmados]);
+
+    const mvpNome = useMemo(() => {
+        const mvpId = data?.mvpUsuarioId;
+        if (!mvpId || !data?.timesGerados) return null;
+        for (const t of data.timesGerados.times) {
+            const j = t.jogadores.find((x) => x.usuarioId === mvpId);
+            if (j) return j.nome;
+        }
+        const r = data.timesGerados.reservas.find((x) => x.usuarioId === mvpId);
+        return r?.nome ?? null;
+    }, [data?.mvpUsuarioId, data?.timesGerados]);
+    const euSouMvp = !!data?.mvpUsuarioId && meuId === data.mvpUsuarioId;
+
+    const jogueiNaPartida = useMemo(() => {
+        if (!meuId || !data?.timesGerados) return false;
+        return data.timesGerados.times.some((t) =>
+            t.jogadores.some((j) => j.usuarioId === meuId)
+        );
+    }, [meuId, data?.timesGerados]);
 
     const partidaAberta = data?.statusPartida === "ABERTA";
     const listaFechada = data?.statusPartida === "LISTA_FECHADA";
@@ -316,20 +336,27 @@ export default function PartidaDetalhePage() {
                             </div>
                             <div className="x-next-step-body">
                                 <div className="x-next-step-label">
-                                    {souMembroDaEquipe ? "Sua vez" : "Avaliação em andamento"}
+                                    {jogueiNaPartida ? "Sua vez" : "Avaliação em andamento"}
                                 </div>
                                 <h3 className="x-next-step-title">
-                                    {souMembroDaEquipe ? "Avaliar os times" : "Aguardando notas"}
+                                    {jogueiNaPartida ? "Avaliar os jogadores" : "Aguardando notas"}
                                 </h3>
                                 <div className="x-next-step-desc">
-                                    {souMembroDaEquipe
-                                        ? "Dê uma nota pra cada time. Quando todos terminarem, o admin encerra."
-                                        : "Os jogadores estão enviando as notas. O admin pode encerrar quando quiser."}
+                                    {jogueiNaPartida
+                                        ? "Dê uma nota pra cada jogador que jogou com você. Quando todos terminarem, o admin encerra."
+                                        : souMembroDaEquipe
+                                            ? "Você não participou dessa partida, então não pode avaliar. Só quem jogou pode dar notas."
+                                            : "Os jogadores estão enviando as notas. O admin pode encerrar quando quiser."}
                                 </div>
                             </div>
                             <div className="x-next-step-actions">
                                 {souMembroDaEquipe && (
-                                    <button className="x-btn" onClick={() => nav(`/partidas/${data.id}/avaliar`)}>
+                                    <button
+                                        className="x-btn"
+                                        onClick={() => nav(`/partidas/${data.id}/avaliar`)}
+                                        disabled={!jogueiNaPartida}
+                                        title={!jogueiNaPartida ? "Só quem jogou a partida pode avaliar" : undefined}
+                                    >
                                         Avaliar agora <span className="x-btn-arr">→</span>
                                     </button>
                                 )}
@@ -343,21 +370,44 @@ export default function PartidaDetalhePage() {
                     )}
 
                     {partidaEncerrada && (
-                        <div className="x-next-step" style={{ background: "rgba(255, 255, 255, 0.03)", borderColor: "var(--x-border-2)" }}>
-                            <div className="x-next-step-icon" style={{ color: "var(--x-success)", borderColor: "var(--x-success)" }}>
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                                    <polyline points="22 4 12 14.01 9 11.01" />
-                                </svg>
-                            </div>
-                            <div className="x-next-step-body">
-                                <div className="x-next-step-label" style={{ color: "var(--x-success)" }}>Partida concluída</div>
-                                <h3 className="x-next-step-title">Avaliação encerrada</h3>
-                                <div className="x-next-step-desc">
-                                    As notas foram registradas e vão calibrar os próximos sorteios. Valeu por jogar!
+                        <>
+                            {mvpNome && (
+                                <div className="x-next-step" style={{ background: "rgba(255, 210, 74, 0.06)", borderColor: "rgba(255, 210, 74, 0.35)" }}>
+                                    <div className="x-next-step-icon" style={{ color: "#FFD24A", borderColor: "rgba(255, 210, 74, 0.5)" }}>
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M8 21h8" />
+                                            <path d="M12 17v4" />
+                                            <path d="M7 4h10v5a5 5 0 1 1-10 0V4z" fill="#FFD24A" fillOpacity="0.2" />
+                                            <path d="M17 4h3v2a3 3 0 0 1-3 3M7 4H4v2a3 3 0 0 0 3 3" />
+                                        </svg>
+                                    </div>
+                                    <div className="x-next-step-body">
+                                        <div className="x-next-step-label" style={{ color: "#FFD24A" }}>MVP da partida</div>
+                                        <h3 className="x-next-step-title">
+                                            {euSouMvp ? `Parabéns, você foi o MVP!` : mvpNome}
+                                        </h3>
+                                        <div className="x-next-step-desc">
+                                            Escolhido por IA com base nas notas que os jogadores deram entre si.
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="x-next-step" style={{ background: "rgba(255, 255, 255, 0.03)", borderColor: "var(--x-border-2)" }}>
+                                <div className="x-next-step-icon" style={{ color: "var(--x-success)", borderColor: "var(--x-success)" }}>
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg>
+                                </div>
+                                <div className="x-next-step-body">
+                                    <div className="x-next-step-label" style={{ color: "var(--x-success)" }}>Partida concluída</div>
+                                    <h3 className="x-next-step-title">Avaliação encerrada</h3>
+                                    <div className="x-next-step-desc">
+                                        As notas foram registradas e vão calibrar os próximos sorteios. Valeu por jogar!
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </>
                     )}
 
                     {/* CTA presença */}
@@ -468,12 +518,22 @@ export default function PartidaDetalhePage() {
                                                 <span className="x-pill accent">{t.jogadores.length}</span>
                                             </div>
                                             <div className="x-team-roster">
-                                                {t.jogadores.map((j) => (
-                                                    <div className="x-team-player" key={j.usuarioId}>
-                                                        <span className="x-team-player-name">{j.nome}</span>
-                                                        <span className="x-team-player-nota">{j.nota}</span>
-                                                    </div>
-                                                ))}
+                                                {t.jogadores.map((j) => {
+                                                    const isMvp = data.mvpUsuarioId === j.usuarioId;
+                                                    return (
+                                                        <div
+                                                            className="x-team-player"
+                                                            key={j.usuarioId}
+                                                            style={isMvp ? { background: "rgba(255,210,74,0.1)", borderColor: "rgba(255,210,74,0.4)" } : undefined}
+                                                        >
+                                                            <span className="x-team-player-name">
+                                                                {isMvp && <span title="MVP" style={{ marginRight: 6 }}>🏆</span>}
+                                                                {j.nome}
+                                                            </span>
+                                                            <span className="x-team-player-nota">{j.nota}</span>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     ))}

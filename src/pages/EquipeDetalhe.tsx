@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getEquipe, entrarEquipeAberta, entrarEquipeFechada, trocarSenhaEquipe, atualizarEquipe, deletarEquipe } from "../services/equipe";
+import { listarPartidasEquipe } from "../services/equipePartidas";
 import type { Esporte, StatusEquipe } from "../services/equipe";
 import { getEu } from "../services/eu";
 import { promoverAdmin, rebaixarMembro, removerMembro } from "../services/membrosEquipe";
 import type { EquipeDetalhe } from "../services/equipe";
+import { getEstatisticasUsuario } from "../services/estatisticas";
+import type { Estatisticas } from "../services/estatisticas";
 import AppHeader from "../components/AppHeader";
 import CountUp from "../components/CountUp";
 import { toast } from "../components/Toast";
-import { explainError, isAuthError } from "../utils/errors";
+import { explainError, isAuthError, isNotImplemented } from "../utils/errors";
 
 function fmtISOToBR(iso?: string) {
     if (!iso) return null;
@@ -18,6 +21,21 @@ function fmtISOToBR(iso?: string) {
 }
 function isAdminRole(papel?: string) {
     return papel === "ADMIN" || papel === "ADMINISTRADOR";
+}
+
+const MEDAL_COLORS = ["#FFD24A", "#D6D8DE", "#E08A4A"]; // ouro, prata, bronze
+const MEDAL_LABELS = ["1º", "2º", "3º"];
+
+function TrophyIcon({ color, size = 18 }: { color: string; size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M8 21h8" />
+            <path d="M12 17v4" />
+            <path d="M7 4h10v5a5 5 0 1 1-10 0V4z" fill={color} fillOpacity="0.18" />
+            <path d="M17 4h3v2a3 3 0 0 1-3 3" />
+            <path d="M7 4H4v2a3 3 0 0 0 3 3" />
+        </svg>
+    );
 }
 
 type ConfirmState =
@@ -34,6 +52,7 @@ export default function EquipeDetalhePage() {
     const [euId, setEuId] = useState<number | null>(null);
     const [souAdmin, setSouAdmin] = useState(false);
     const [souMembro, setSouMembro] = useState(false);
+    const [totalJogos, setTotalJogos] = useState<number | null>(null);
 
     const [loadingEntrar, setLoadingEntrar] = useState(false);
     const [showSenhaModal, setShowSenhaModal] = useState(false);
@@ -124,6 +143,32 @@ export default function EquipeDetalhePage() {
     const [busyUserId, setBusyUserId] = useState<number | null>(null);
     const [confirm, setConfirm] = useState<ConfirmState>(null);
 
+    // modal "ver mais" do membro (detalhes + estatísticas)
+    const [detalheMembro, setDetalheMembro] = useState<{ usuarioId: number; nome: string; papel?: string; ativo?: boolean } | null>(null);
+    const [detalheStats, setDetalheStats] = useState<Estatisticas | null>(null);
+    const [detalheLoading, setDetalheLoading] = useState(false);
+    const [detalheErr, setDetalheErr] = useState<string | null>(null);
+
+    async function abrirDetalheMembro(m: { usuarioId: number; nome: string; papel?: string; ativo?: boolean }) {
+        setDetalheMembro(m);
+        setDetalheStats(null);
+        setDetalheErr(null);
+        setDetalheLoading(true);
+        try {
+            const s = await getEstatisticasUsuario(m.usuarioId);
+            setDetalheStats(s);
+        } catch (e: any) {
+            if (isAuthError(e)) return;
+            if (isNotImplemented(e)) {
+                setDetalheErr("Estatísticas deste jogador ainda não estão disponíveis.");
+            } else {
+                setDetalheErr(explainError(e));
+            }
+        } finally {
+            setDetalheLoading(false);
+        }
+    }
+
     const PAGE_SIZE = 10;
     const [page, setPage] = useState(1);
 
@@ -135,6 +180,11 @@ export default function EquipeDetalhePage() {
             const [eu, equipe] = await Promise.all([getEu(), getEquipe(equipeId)]);
             setEuId(eu.id);
             setData(equipe);
+
+            // Número de jogos/partidas da equipe (silencioso se falhar)
+            listarPartidasEquipe(equipeId)
+                .then((ps) => setTotalJogos(ps.length))
+                .catch(() => setTotalJogos(null));
 
             // Admin detection com múltiplas fontes (robusta contra backends variantes)
             const anyEquipe: any = equipe;
@@ -162,7 +212,17 @@ export default function EquipeDetalhePage() {
 
     useEffect(() => { load(); /* eslint-disable-next-line */ }, [equipeId]);
 
-    const membros = useMemo(() => data?.membros ?? [], [data]);
+    const membros = useMemo(() => {
+        const arr = [...(data?.membros ?? [])];
+        // ordena por nota desc (nulos no fim), empate por nome
+        arr.sort((a, b) => {
+            const na = typeof a.nota === "number" ? a.nota : -Infinity;
+            const nb = typeof b.nota === "number" ? b.nota : -Infinity;
+            if (nb !== na) return nb - na;
+            return (a.nome ?? "").localeCompare(b.nome ?? "", "pt-BR");
+        });
+        return arr;
+    }, [data]);
     const membrosAtivos = useMemo(() => membros.filter((m) => m.ativo).length, [membros]);
     const adminsAtivos = useMemo(() => membros.filter((m) => m.ativo && isAdminRole(m.papel)).length, [membros]);
     const totalMembros = membros.length;
@@ -372,33 +432,65 @@ export default function EquipeDetalhePage() {
                             <span className="x-stat-mini-lbl">Admins</span>
                             <span className="x-stat-mini-val"><CountUp to={adminsAtivos} /></span>
                         </div>
+                        <div className="x-stat-mini">
+                            <span className="x-stat-mini-lbl">Jogos</span>
+                            <span className="x-stat-mini-val">
+                                {totalJogos == null ? "—" : <CountUp to={totalJogos} />}
+                            </span>
+                        </div>
+                        {typeof data.notaEquipe === "number" && (
+                            <div className="x-stat-mini">
+                                <span className="x-stat-mini-lbl">Nota equipe</span>
+                                <span className="x-stat-mini-val" style={{ color: "var(--x-accent)" }}>
+                                    ★ {Number(data.notaEquipe).toFixed(1)}
+                                </span>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Meta row */}
-                    {(data.diasHorariosPadrao || criadoEm) && (
-                        <div className="x-meta-row x-reveal" style={{ marginBottom: 28 }}>
-                            {data.diasHorariosPadrao && (
-                                <div className="x-meta-item">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                                        <rect x="3" y="4" width="18" height="18" rx="2" />
-                                        <line x1="16" y1="2" x2="16" y2="6" />
-                                        <line x1="8" y1="2" x2="8" y2="6" />
-                                        <line x1="3" y1="10" x2="21" y2="10" />
-                                    </svg>
-                                    <span>{data.diasHorariosPadrao}</span>
-                                </div>
-                            )}
-                            {criadoEm && (
-                                <div className="x-meta-item">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                                        <circle cx="12" cy="12" r="10" />
-                                        <polyline points="12 6 12 12 16 14" />
-                                    </svg>
-                                    <span>Criada em {criadoEm}</span>
+                    {/* Info detalhada */}
+                    <div className="x-card" style={{ marginBottom: 24 }}>
+                        <div className="x-card-title">Informações</div>
+                        <hr className="x-divider" />
+                        <div className="x-info-grid">
+                            <div className="x-info-item">
+                                <span className="x-info-lbl">Nome</span>
+                                <span className="x-info-val">{data.nome}</span>
+                            </div>
+                            <div className="x-info-item">
+                                <span className="x-info-lbl">CEP / Local</span>
+                                <span className="x-info-val">{data.cepOuLocal || "—"}</span>
+                            </div>
+                            <div className="x-info-item">
+                                <span className="x-info-lbl">Esporte</span>
+                                <span className="x-info-val">{data.esporte}</span>
+                            </div>
+                            <div className="x-info-item">
+                                <span className="x-info-lbl">Status</span>
+                                <span className="x-info-val">{data.statusEquipe}</span>
+                            </div>
+                            <div className="x-info-item">
+                                <span className="x-info-lbl">Agenda padrão</span>
+                                <span className="x-info-val">{data.diasHorariosPadrao || "—"}</span>
+                            </div>
+                            <div className="x-info-item">
+                                <span className="x-info-lbl">Criada em</span>
+                                <span className="x-info-val">{criadoEm ?? "—"}</span>
+                            </div>
+                            <div className="x-info-item">
+                                <span className="x-info-lbl">Jogos</span>
+                                <span className="x-info-val">{totalJogos == null ? "—" : totalJogos}</span>
+                            </div>
+                            {typeof data.notaEquipe === "number" && (
+                                <div className="x-info-item">
+                                    <span className="x-info-lbl">Nota da equipe</span>
+                                    <span className="x-info-val" style={{ color: "var(--x-accent)" }}>
+                                        ★ {Number(data.notaEquipe).toFixed(1)}
+                                    </span>
                                 </div>
                             )}
                         </div>
-                    )}
+                    </div>
 
                     {/* Administração (só admin) */}
                     {souAdmin && (
@@ -472,59 +564,79 @@ export default function EquipeDetalhePage() {
                         </div>
                         <p className="x-card-sub">
                             {souAdmin
-                                ? "Como admin, você pode promover, rebaixar ou remover membros."
+                                ? "Toque em “Ver mais” para ver estatísticas do jogador, promover, rebaixar ou remover."
                                 : souMembro
-                                    ? "Você é membro desta equipe."
-                                    : "Apenas membros visualizam ações."}
+                                    ? "Toque em “Ver mais” para ver estatísticas de cada jogador."
+                                    : "Toque em “Ver mais” para ver estatísticas de cada jogador."}
                         </p>
                         <hr className="x-divider" />
 
                         <div className="x-list">
-                            {membrosPaginados.map((m) => {
+                            {membrosPaginados.map((m, idx) => {
+                                const absoluteRank = pageStart + idx; // 0-based
                                 const isMe = euId === m.usuarioId;
-                                const canManage = souAdmin && !isMe;
                                 const isAdm = isAdminRole(m.papel);
+                                const hasNota = typeof m.nota === "number";
+                                const medal = absoluteRank < 3 && hasNota ? absoluteRank : -1;
+                                const medalColor = medal >= 0 ? MEDAL_COLORS[medal] : null;
+                                const medalLabel = medal >= 0 ? MEDAL_LABELS[medal] : null;
 
                                 return (
-                                    <div key={m.usuarioId} className={`x-row ${m.ativo ? "" : "dim"}`}>
-                                        <div className="x-avatar sm">
+                                    <div
+                                        key={m.usuarioId}
+                                        className={`x-row ${m.ativo ? "" : "dim"}`}
+                                        style={medal >= 0 ? { borderLeft: `3px solid ${medalColor}` } : undefined}
+                                    >
+                                        <div className="x-avatar sm" style={medal >= 0 ? { boxShadow: `0 0 0 2px ${medalColor}` } : undefined}>
                                             {String(m.nome || "?").trim().charAt(0).toUpperCase()}
                                         </div>
                                         <div className="x-row-main">
-                                            <div className="x-row-name">
+                                            <div className="x-row-name" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                                {medal >= 0 && (
+                                                    <span
+                                                        title={`${medalLabel} lugar`}
+                                                        style={{
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            gap: 4,
+                                                            color: medalColor ?? undefined,
+                                                            fontWeight: 800,
+                                                            fontSize: 12,
+                                                        }}
+                                                    >
+                                                        <TrophyIcon color={medalColor ?? "#FFD24A"} size={16} />
+                                                        {medalLabel}
+                                                    </span>
+                                                )}
                                                 {m.nome}
                                                 {isMe && <span className="x-row-me">você</span>}
                                             </div>
                                             <div className="x-row-meta">
                                                 <span className={`x-pill ${isAdm ? "accent" : ""}`}>{isAdm ? "Admin" : "Membro"}</span>
                                                 <span className={`x-pill ${m.ativo ? "success" : ""}`}>{m.ativo ? "Ativo" : "Inativo"}</span>
+                                                {hasNota && (
+                                                    <span className="x-pill" title="Nota do jogador">
+                                                        ★ {Number(m.nota).toFixed(1)}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="x-row-actions">
-                                            {canManage ? (
-                                                <>
-                                                    {isAdm ? (
-                                                        <button
-                                                            className="x-btn ghost sm"
-                                                            disabled={busyUserId === m.usuarioId}
-                                                            onClick={() => setConfirm({ kind: "REBAIXAR", usuarioId: m.usuarioId, nome: m.nome, papel: m.papel })}
-                                                        >Rebaixar</button>
-                                                    ) : (
-                                                        <button
-                                                            className="x-btn sm"
-                                                            disabled={busyUserId === m.usuarioId}
-                                                            onClick={() => setConfirm({ kind: "PROMOVER", usuarioId: m.usuarioId, nome: m.nome, papel: m.papel })}
-                                                        >Promover</button>
-                                                    )}
-                                                    <button
-                                                        className="x-btn danger sm"
-                                                        disabled={busyUserId === m.usuarioId}
-                                                        onClick={() => setConfirm({ kind: "REMOVER", usuarioId: m.usuarioId, nome: m.nome, papel: m.papel })}
-                                                    >Remover</button>
-                                                </>
-                                            ) : (
-                                                <span className="x-meta">—</span>
-                                            )}
+                                            <button
+                                                className="x-btn ghost sm"
+                                                onClick={() => abrirDetalheMembro({
+                                                    usuarioId: m.usuarioId,
+                                                    nome: m.nome,
+                                                    papel: m.papel,
+                                                    ativo: m.ativo,
+                                                })}
+                                                title="Ver detalhes e estatísticas"
+                                            >
+                                                Ver mais
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 4 }}>
+                                                    <polyline points="9 18 15 12 9 6" />
+                                                </svg>
+                                            </button>
                                         </div>
                                     </div>
                                 );
@@ -718,6 +830,164 @@ export default function EquipeDetalhePage() {
                             <button className="x-btn" onClick={handleEntrarComSenha} disabled={!senhaInput.trim() || loadingEntrar}>
                                 {loadingEntrar ? "..." : "Entrar"}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de detalhes do membro */}
+            {detalheMembro && (
+                <div className="x-modal-overlay" onClick={() => setDetalheMembro(null)}>
+                    <div className="x-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="x-eyebrow">Jogador</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12, marginBottom: 8 }}>
+                            <div className="x-avatar">
+                                {String(detalheMembro.nome || "?").trim().charAt(0).toUpperCase()}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <h3 className="x-modal-title" style={{ margin: 0 }}>{detalheMembro.nome}</h3>
+                                <div className="x-row-meta" style={{ marginTop: 6 }}>
+                                    <span className={`x-pill ${isAdminRole(detalheMembro.papel) ? "accent" : ""}`}>
+                                        {isAdminRole(detalheMembro.papel) ? "Admin" : "Membro"}
+                                    </span>
+                                    <span className={`x-pill ${detalheMembro.ativo ? "success" : ""}`}>
+                                        {detalheMembro.ativo ? "Ativo" : "Inativo"}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr className="x-divider" />
+
+                        {/* Estatísticas */}
+                        <div style={{ marginBottom: 20 }}>
+                            <div className="x-eyebrow" style={{ marginBottom: 10 }}>Estatísticas</div>
+                            {detalheLoading ? (
+                                <div className="x-loading" style={{ padding: 20 }}>
+                                    <div className="x-spinner" /> Carregando...
+                                </div>
+                            ) : detalheErr ? (
+                                <p className="x-meta">{detalheErr}</p>
+                            ) : detalheStats ? (
+                                <>
+                                    <div className="x-stats-compact" style={{ marginBottom: 18 }}>
+                                        <div className="x-stat-mini">
+                                            <span className="x-stat-mini-lbl">Nota atual</span>
+                                            <span className="x-stat-mini-val" style={{ color: "var(--x-accent)" }}>
+                                                {detalheStats.notaAtual != null ? `★ ${Number(detalheStats.notaAtual).toFixed(1)}` : "—"}
+                                            </span>
+                                        </div>
+                                        <div className="x-stat-mini">
+                                            <span className="x-stat-mini-lbl">Partidas</span>
+                                            <span className="x-stat-mini-val">{detalheStats.totalPartidas ?? 0}</span>
+                                        </div>
+                                        <div className="x-stat-mini">
+                                            <span className="x-stat-mini-lbl">Média recebida</span>
+                                            <span className="x-stat-mini-val">
+                                                {detalheStats.mediaNotasRecebidas != null ? Number(detalheStats.mediaNotasRecebidas).toFixed(1) : "—"}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Últimas partidas */}
+                                    {detalheStats.ultimasPartidas?.length > 0 && (
+                                        <>
+                                            <div className="x-eyebrow" style={{ marginBottom: 8 }}>Últimas partidas</div>
+                                            <div className="x-list" style={{ marginBottom: 18 }}>
+                                                {detalheStats.ultimasPartidas.map((p) => (
+                                                    <div key={p.partidaId} className="x-row">
+                                                        <div className="x-row-main">
+                                                            <div className="x-row-name">
+                                                                {new Date(p.dataHora).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                                                                {p.foiMvp && (
+                                                                    <span className="x-row-me" style={{ background: "rgba(255,210,74,0.16)", color: "#FFD24A", borderColor: "rgba(255,210,74,0.35)" }}>
+                                                                        🏆 MVP
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="x-row-meta">
+                                                                <span className="x-pill">
+                                                                    {p.notaRecebida != null ? `★ ${Number(p.notaRecebida).toFixed(1)}` : "sem nota"}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* Parceiros frequentes */}
+                                    {detalheStats.parceirosFrequentes?.length > 0 && (
+                                        <>
+                                            <div className="x-eyebrow" style={{ marginBottom: 8 }}>Parceiros frequentes</div>
+                                            <div className="x-list">
+                                                {detalheStats.parceirosFrequentes.slice(0, 3).map((pp) => (
+                                                    <div key={pp.usuarioId} className="x-row">
+                                                        <div className="x-avatar sm">
+                                                            {String(pp.nome || "?").trim().charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div className="x-row-main">
+                                                            <div className="x-row-name">{pp.nome}</div>
+                                                            <div className="x-row-meta">
+                                                                <span className="x-pill">
+                                                                    {pp.totalPartidasJuntos} partida{pp.totalPartidasJuntos !== 1 ? "s" : ""}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+                                </>
+                            ) : (
+                                <p className="x-meta">Sem dados.</p>
+                            )}
+                        </div>
+
+                        {/* Ações de admin */}
+                        {souAdmin && euId !== detalheMembro.usuarioId && (
+                            <>
+                                <hr className="x-divider" />
+                                <div className="x-eyebrow" style={{ marginBottom: 10 }}>Ações de admin</div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 20 }}>
+                                    {isAdminRole(detalheMembro.papel) ? (
+                                        <button
+                                            className="x-btn ghost sm"
+                                            disabled={busyUserId === detalheMembro.usuarioId}
+                                            onClick={() => {
+                                                const m = detalheMembro;
+                                                setDetalheMembro(null);
+                                                setConfirm({ kind: "REBAIXAR", usuarioId: m.usuarioId, nome: m.nome, papel: m.papel });
+                                            }}
+                                        >Rebaixar admin</button>
+                                    ) : (
+                                        <button
+                                            className="x-btn sm"
+                                            disabled={busyUserId === detalheMembro.usuarioId}
+                                            onClick={() => {
+                                                const m = detalheMembro;
+                                                setDetalheMembro(null);
+                                                setConfirm({ kind: "PROMOVER", usuarioId: m.usuarioId, nome: m.nome, papel: m.papel });
+                                            }}
+                                        >Promover a admin</button>
+                                    )}
+                                    <button
+                                        className="x-btn danger sm"
+                                        disabled={busyUserId === detalheMembro.usuarioId}
+                                        onClick={() => {
+                                            const m = detalheMembro;
+                                            setDetalheMembro(null);
+                                            setConfirm({ kind: "REMOVER", usuarioId: m.usuarioId, nome: m.nome, papel: m.papel });
+                                        }}
+                                    >Remover da equipe</button>
+                                </div>
+                            </>
+                        )}
+
+                        <div className="x-modal-actions">
+                            <button className="x-btn ghost" onClick={() => setDetalheMembro(null)}>Fechar</button>
                         </div>
                     </div>
                 </div>

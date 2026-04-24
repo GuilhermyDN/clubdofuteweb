@@ -429,7 +429,29 @@ body {
 }
 .x-avatar.sm { width: 34px; height: 34px; font-size: 13px; }
 .x-avatar.lg { width: 80px; height: 80px; font-size: 30px; border-radius: var(--x-r); }
-.x-avatar.xl { width: 116px; height: 116px; font-size: 42px; border-radius: var(--x-r); border-width: 2px; }
+.x-avatar.xl { width: 116px; height: 116px; font-size: 42px; border-radius: var(--x-r); border-width: 2px; overflow: hidden; }
+.x-avatar-cam {
+    position: absolute;
+    right: -6px;
+    bottom: -6px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--x-accent);
+    color: var(--x-accent-ink);
+    border: 3px solid var(--x-bg);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(198, 255, 61, 0.4);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.x-avatar-cam:hover:not(:disabled) {
+    transform: scale(1.08) rotate(-4deg);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--x-accent);
+}
+.x-avatar-cam:disabled { opacity: 0.7; cursor: progress; }
 .x-avatar.teal { background: linear-gradient(135deg, #19e6b6, #00ae7a); color: #041812; border-color: #19e6b6; }
 .x-avatar.blue { background: linear-gradient(135deg, #5ea0ff, #2a6fd6); color: #fff; border-color: #5ea0ff; }
 
@@ -2582,7 +2604,8 @@ body {
 }
 .x-star-fg {
     pointer-events: none;
-    transition: clip-path 0.15s ease;
+    transition: clip-path 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: clip-path;
 }
 .x-star-fg path {
     fill: var(--x-accent);
@@ -2590,6 +2613,29 @@ body {
     stroke-width: 1.4;
     stroke-linejoin: round;
     filter: drop-shadow(0 0 10px var(--x-accent-glow));
+    transition: filter 0.3s ease;
+}
+/* Pop quando a estrela "mais alta acesa" muda (estrela de ponta) */
+.x-star.is-tip .x-star-fg {
+    animation: x-star-tip-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.x-star.is-tip .x-star-fg path {
+    filter: drop-shadow(0 0 16px var(--x-accent-glow)) drop-shadow(0 0 4px var(--x-accent));
+}
+@keyframes x-star-tip-pop {
+    0%   { transform: scale(0.6); opacity: 0.4; }
+    55%  { transform: scale(1.25); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+/* Pulse no clique: usa data-pulse pra retriggar animação */
+.x-star[data-pulse]:active:not(:disabled) .x-star-fg,
+.x-star[data-pulse]:not(:disabled):focus-visible .x-star-fg {
+    animation: x-star-click 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes x-star-click {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.35) rotate(-6deg); }
+    100% { transform: scale(1); }
 }
 
 .x-stars-ticker {
@@ -2600,6 +2646,13 @@ body {
     background: var(--x-accent-soft);
     border: 1px solid rgba(198, 255, 61, 0.22);
     border-radius: var(--x-r-pill);
+    animation: x-stars-ticker-bounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: background 0.25s ease, border-color 0.25s ease;
+}
+@keyframes x-stars-ticker-bounce {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.12); box-shadow: 0 0 24px var(--x-accent-glow); }
+    100% { transform: scale(1); }
 }
 .x-stars-current {
     font-family: var(--x-font-display);
@@ -2765,6 +2818,32 @@ body {
     color: var(--x-text-2);
 }
 .x-meta-item svg { color: var(--x-text-3); flex-shrink: 0; }
+
+/* info grid (key-value de detalhes) */
+.x-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px 20px;
+}
+.x-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+.x-info-lbl {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--x-text-3);
+}
+.x-info-val {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--x-text);
+    word-break: break-word;
+}
 
 /* stats bar */
 .x-stats {

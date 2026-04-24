@@ -17,6 +17,7 @@ export type MembroEquipe = {
   nome: string;
   papel: "ADMIN" | "ADMINISTRADOR" | "MEMBRO" | string;
   ativo: boolean;
+  nota?: number | null;
 };
 
 export type EquipeDetalhe = EquipeResumo & {
@@ -24,6 +25,7 @@ export type EquipeDetalhe = EquipeResumo & {
   totalMembros?: number;
   criadoEm?: string;
   criadoPorUsuarioId?: number;
+  notaEquipe?: number | null;
   // se o backend devolver, ótimo. se não devolver, fica undefined por enquanto
   meuPapel?: "ADMIN" | "MEMBRO";
   souMembro?: boolean;

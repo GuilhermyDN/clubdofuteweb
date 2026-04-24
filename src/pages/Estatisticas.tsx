@@ -60,42 +60,100 @@ export default function EstatisticasPage() {
                             </p>
                         </div>
                     ) : data ? (
-                        <div className="x-stats x-stagger">
-                            <div className="x-stat x-reveal">
-                                <div className="x-stat-lbl">Partidas jogadas</div>
-                                <div className="x-stat-val"><CountUp to={data.totalPartidasJogadas ?? 0} /></div>
-                            </div>
-                            <div className="x-stat x-reveal">
-                                <div className="x-stat-lbl">Confirmadas</div>
-                                <div className="x-stat-val"><CountUp to={data.totalPartidasConfirmadas ?? 0} /></div>
-                            </div>
-                            <div className="x-stat x-reveal">
-                                <div className="x-stat-lbl">Equipes</div>
-                                <div className="x-stat-val"><CountUp to={data.totalEquipes ?? 0} /></div>
-                            </div>
-                            <div className="x-stat x-reveal">
-                                <div className="x-stat-lbl">Nota média vôlei</div>
-                                <div className="x-stat-val">
-                                    {data.notaMediaVolei != null
-                                        ? <CountUp to={data.notaMediaVolei} decimals={1} />
-                                        : "—"}
-                                </div>
-                            </div>
-                            <div className="x-stat x-reveal">
-                                <div className="x-stat-lbl">Nota média futevôlei</div>
-                                <div className="x-stat-val">
-                                    {data.notaMediaFutevolei != null
-                                        ? <CountUp to={data.notaMediaFutevolei} decimals={1} />
-                                        : "—"}
-                                </div>
-                            </div>
-                            {data.rankingPosicao != null && (
+                        <>
+                            <div className="x-stats x-stagger" style={{ marginBottom: 32 }}>
                                 <div className="x-stat x-reveal">
-                                    <div className="x-stat-lbl">Ranking</div>
-                                    <div className="x-stat-val"><em>#<CountUp to={data.rankingPosicao} /></em></div>
+                                    <div className="x-stat-lbl">Partidas jogadas</div>
+                                    <div className="x-stat-val"><CountUp to={data.totalPartidas ?? 0} /></div>
+                                </div>
+                                <div className="x-stat x-reveal">
+                                    <div className="x-stat-lbl">Nota atual</div>
+                                    <div className="x-stat-val">
+                                        {data.notaAtual != null
+                                            ? <CountUp to={data.notaAtual} decimals={1} />
+                                            : "—"}
+                                    </div>
+                                </div>
+                                <div className="x-stat x-reveal">
+                                    <div className="x-stat-lbl">Média recebida</div>
+                                    <div className="x-stat-val">
+                                        {data.mediaNotasRecebidas != null
+                                            ? <CountUp to={data.mediaNotasRecebidas} decimals={1} />
+                                            : "—"}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Últimas partidas */}
+                            <div className="x-card" style={{ marginBottom: 24 }}>
+                                <div className="x-card-title">
+                                    Últimas partidas
+                                    <span className="x-pill">{data.ultimasPartidas?.length ?? 0}</span>
+                                </div>
+                                <hr className="x-divider" />
+                                {!data.ultimasPartidas?.length ? (
+                                    <p className="x-meta">Nenhuma partida encerrada ainda.</p>
+                                ) : (
+                                    <div className="x-list">
+                                        {data.ultimasPartidas.map((p) => (
+                                            <div key={p.partidaId} className="x-row">
+                                                <div className="x-avatar sm">
+                                                    {p.foiMvp ? (
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFD24A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M7 4h10v5a5 5 0 1 1-10 0V4z" fill="#FFD24A" fillOpacity="0.2" />
+                                                            <path d="M12 17v4M8 21h8M17 4h3v2a3 3 0 0 1-3 3M7 4H4v2a3 3 0 0 0 3 3" />
+                                                        </svg>
+                                                    ) : "★"}
+                                                </div>
+                                                <div className="x-row-main">
+                                                    <div className="x-row-name">
+                                                        {new Date(p.dataHora).toLocaleString("pt-BR")}
+                                                        {p.foiMvp && (
+                                                            <span className="x-row-me" style={{ background: "rgba(255,210,74,0.16)", color: "#FFD24A", borderColor: "rgba(255,210,74,0.35)" }}>
+                                                                MVP
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="x-row-meta">
+                                                        <span className="x-pill">
+                                                            {p.notaRecebida != null ? `★ ${Number(p.notaRecebida).toFixed(1)}` : "sem nota"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Parceiros frequentes */}
+                            {data.parceirosFrequentes?.length > 0 && (
+                                <div className="x-card">
+                                    <div className="x-card-title">
+                                        Parceiros frequentes
+                                        <span className="x-pill">{data.parceirosFrequentes.length}</span>
+                                    </div>
+                                    <hr className="x-divider" />
+                                    <div className="x-list">
+                                        {data.parceirosFrequentes.map((p) => (
+                                            <div key={p.usuarioId} className="x-row">
+                                                <div className="x-avatar sm">
+                                                    {String(p.nome || "?").trim().charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="x-row-main">
+                                                    <div className="x-row-name">{p.nome}</div>
+                                                    <div className="x-row-meta">
+                                                        <span className="x-pill">
+                                                            {p.totalPartidasJuntos} partida{p.totalPartidasJuntos !== 1 ? "s" : ""} junto{p.totalPartidasJuntos !== 1 ? "s" : ""}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
-                        </div>
+                        </>
                     ) : null}
                 </div>
             </main>
