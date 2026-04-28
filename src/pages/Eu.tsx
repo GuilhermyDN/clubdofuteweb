@@ -389,7 +389,7 @@ export default function EuPage() {
                                     </svg>
                                 </div>
                                 <p className="x-empty-text">Você ainda não administra nenhuma equipe.</p>
-                                <button className="x-btn sm" onClick={() => nav("/equipes")}>Criar equipe <span className="x-btn-arr">+</span></button>
+                                <button className="x-btn sm" onClick={() => nav("/equipes?criar=1")}>Criar equipe <span className="x-btn-arr">+</span></button>
                             </div>
                         ) : (
                             <div className="x-list">

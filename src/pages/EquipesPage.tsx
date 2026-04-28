@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { CriarEquipeBody, EquipeDetalhe, EquipeResumo, Esporte, StatusEquipe } from "../services/equipe";
 import {
     buscarEquipes, criarEquipe, entrarEquipeAberta, entrarEquipeFechada, getEquipe, listarMinhasEquipes,
@@ -32,6 +32,7 @@ const DIAS: { key: DiaKey; label: string }[] = [
 
 export default function EquipesPage() {
     const nav = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const [bootLoading, setBootLoading] = useState(true);
     const [minhasEquipes, setMinhasEquipes] = useState<EquipeResumo[]>([]);
@@ -85,6 +86,16 @@ export default function EquipesPage() {
             firstInput?.focus({ preventScroll: true });
         });
     }
+
+    useEffect(() => {
+        if (searchParams.get("criar") === "1") {
+            abrirFormularioCriar();
+            const next = new URLSearchParams(searchParams);
+            next.delete("criar");
+            setSearchParams(next, { replace: true });
+        }
+        // eslint-disable-next-line
+    }, []);
 
     function setCreateField<K extends keyof CriarEquipeBody>(k: K, v: CriarEquipeBody[K]) {
         setCreate((p) => ({ ...p, [k]: v }));
