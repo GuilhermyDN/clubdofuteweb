@@ -18,6 +18,7 @@ export type MembroEquipe = {
   papel: "ADMIN" | "ADMINISTRADOR" | "MEMBRO" | string;
   ativo: boolean;
   nota?: number | null;
+  fotoPerfil?: string | null;
 };
 
 export type EquipeDetalhe = EquipeResumo & {

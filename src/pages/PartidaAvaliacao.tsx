@@ -3,12 +3,14 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../services/api";
 import { getPartida, enviarAvaliacoesJogadores } from "../services/partidas";
 import AppHeader from "../components/AppHeader";
+import UserAvatar from "../components/UserAvatar";
+import UserDetalheModal from "../components/UserDetalheModal";
 import StarRating from "../components/StarRating";
 import { toast } from "../components/Toast";
 import { explainError, isAuthError } from "../utils/errors";
 
-type Presenca = { usuarioId: number; nome: string; statusPresenca: "CONFIRMADO" | "CANCELADO" | string; };
-type TimeJogador = { usuarioId: number; nome: string; nota: number; };
+type Presenca = { usuarioId: number; nome: string; statusPresenca: "CONFIRMADO" | "CANCELADO" | string; fotoPerfil?: string | null; };
+type TimeJogador = { usuarioId: number; nome: string; nota: number; fotoPerfil?: string | null; };
 type TimeGerado = { numero: number; jogadores: TimeJogador[]; };
 type TimesGerados = { id: number; partidaId: number; times: TimeGerado[]; reservas: TimeJogador[]; geradoEm: string; };
 type PartidaDetalhe = {
@@ -42,6 +44,7 @@ type JogadorAvaliavel = {
     usuarioId: number;
     nome: string;
     timeNumero: number | null; // null = reserva
+    fotoPerfil?: string | null;
 };
 
 export default function PartidaAvaliacaoPage() {
@@ -57,6 +60,7 @@ export default function PartidaAvaliacaoPage() {
     const [notasPorUsuario, setNotasPorUsuario] = useState<Record<number, number>>({});
     const [sending, setSending] = useState(false);
     const [currentIdx, setCurrentIdx] = useState(0);
+    const [userDetalhe, setUserDetalhe] = useState<{ usuarioId: number; nome: string; fotoPerfil?: string | null } | null>(null);
 
     async function loadPartida() {
         if (!partidaId) { setGateErr("ID de partida ausente."); return; }
@@ -104,11 +108,11 @@ export default function PartidaAvaliacaoPage() {
         const list: JogadorAvaliavel[] = [];
         (data.timesGerados.times ?? []).forEach((t) => {
             (t.jogadores ?? []).forEach((j) => {
-                list.push({ usuarioId: j.usuarioId, nome: j.nome, timeNumero: t.numero });
+                list.push({ usuarioId: j.usuarioId, nome: j.nome, timeNumero: t.numero, fotoPerfil: j.fotoPerfil });
             });
         });
         (data.timesGerados.reservas ?? []).forEach((r) => {
-            list.push({ usuarioId: r.usuarioId, nome: r.nome, timeNumero: null });
+            list.push({ usuarioId: r.usuarioId, nome: r.nome, timeNumero: null, fotoPerfil: r.fotoPerfil });
         });
         return list.filter((j) => j.usuarioId !== meuId);
     }, [data?.timesGerados, meuId]);
@@ -282,10 +286,8 @@ export default function PartidaAvaliacaoPage() {
                             {currentJogador && (
                                 <div className="x-wizard-card">
                                     <div className="x-wizard-team">
-                                        <div className="x-avatar lg">
-                                            {String(currentJogador.nome || "?").trim().charAt(0).toUpperCase()}
-                                        </div>
-                                        <div>
+                                        <UserAvatar nome={currentJogador.nome} fotoPerfil={currentJogador.fotoPerfil} size="lg" />
+                                        <div style={{ flex: 1, minWidth: 0 }}>
                                             <h3 className="x-wizard-team-name">{currentJogador.nome}</h3>
                                             <div className="x-wizard-team-sub">
                                                 {currentJogador.timeNumero != null
@@ -293,6 +295,14 @@ export default function PartidaAvaliacaoPage() {
                                                     : "Reserva"}
                                             </div>
                                         </div>
+                                        <button
+                                            type="button"
+                                            className="x-btn ghost sm"
+                                            onClick={() => setUserDetalhe({ usuarioId: currentJogador.usuarioId, nome: currentJogador.nome, fotoPerfil: currentJogador.fotoPerfil })}
+                                            title="Ver detalhes"
+                                        >
+                                            Detalhes
+                                        </button>
                                     </div>
 
                                     <div className="x-wizard-rating">
@@ -335,6 +345,15 @@ export default function PartidaAvaliacaoPage() {
                     )}
                 </div>
             </main>
+
+            {userDetalhe && (
+                <UserDetalheModal
+                    usuarioId={userDetalhe.usuarioId}
+                    nome={userDetalhe.nome}
+                    fotoPerfil={userDetalhe.fotoPerfil}
+                    onClose={() => setUserDetalhe(null)}
+                />
+            )}
         </div>
     );
 }

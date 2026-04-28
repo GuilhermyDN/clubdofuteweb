@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import AppHeader from "../components/AppHeader";
 import CountUp from "../components/CountUp";
+import UserAvatar from "../components/UserAvatar";
+import UserDetalheModal from "../components/UserDetalheModal";
 import { toast } from "../components/Toast";
 import { explainError, isAuthError, isNotImplemented } from "../utils/errors";
 import { getEstatisticas, type Estatisticas as Stats } from "../services/estatisticas";
@@ -9,6 +11,7 @@ export default function EstatisticasPage() {
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<Stats | null>(null);
     const [notImplemented, setNotImplemented] = useState(false);
+    const [userDetalhe, setUserDetalhe] = useState<{ usuarioId: number; nome: string; fotoPerfil?: string | null } | null>(null);
 
     async function load() {
         setLoading(true);
@@ -137,9 +140,7 @@ export default function EstatisticasPage() {
                                     <div className="x-list">
                                         {data.parceirosFrequentes.map((p) => (
                                             <div key={p.usuarioId} className="x-row">
-                                                <div className="x-avatar sm">
-                                                    {String(p.nome || "?").trim().charAt(0).toUpperCase()}
-                                                </div>
+                                                <UserAvatar nome={p.nome} fotoPerfil={p.fotoPerfil} size="sm" />
                                                 <div className="x-row-main">
                                                     <div className="x-row-name">{p.nome}</div>
                                                     <div className="x-row-meta">
@@ -147,6 +148,15 @@ export default function EstatisticasPage() {
                                                             {p.totalPartidasJuntos} partida{p.totalPartidasJuntos !== 1 ? "s" : ""} junto{p.totalPartidasJuntos !== 1 ? "s" : ""}
                                                         </span>
                                                     </div>
+                                                </div>
+                                                <div className="x-row-actions">
+                                                    <button
+                                                        className="x-btn ghost sm"
+                                                        onClick={() => setUserDetalhe({ usuarioId: p.usuarioId, nome: p.nome, fotoPerfil: p.fotoPerfil })}
+                                                        title="Ver detalhes"
+                                                    >
+                                                        Detalhes
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
@@ -157,6 +167,15 @@ export default function EstatisticasPage() {
                     ) : null}
                 </div>
             </main>
+
+            {userDetalhe && (
+                <UserDetalheModal
+                    usuarioId={userDetalhe.usuarioId}
+                    nome={userDetalhe.nome}
+                    fotoPerfil={userDetalhe.fotoPerfil}
+                    onClose={() => setUserDetalhe(null)}
+                />
+            )}
         </div>
     );
 }

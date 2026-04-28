@@ -10,6 +10,7 @@ import { getEstatisticasUsuario } from "../services/estatisticas";
 import type { Estatisticas } from "../services/estatisticas";
 import AppHeader from "../components/AppHeader";
 import CountUp from "../components/CountUp";
+import UserAvatar from "../components/UserAvatar";
 import { toast } from "../components/Toast";
 import { explainError, isAuthError, isNotImplemented } from "../utils/errors";
 
@@ -218,12 +219,12 @@ export default function EquipeDetalhePage() {
     const [confirm, setConfirm] = useState<ConfirmState>(null);
 
     // modal "ver mais" do membro (detalhes + estatísticas)
-    const [detalheMembro, setDetalheMembro] = useState<{ usuarioId: number; nome: string; papel?: string; ativo?: boolean } | null>(null);
+    const [detalheMembro, setDetalheMembro] = useState<{ usuarioId: number; nome: string; papel?: string; ativo?: boolean; fotoPerfil?: string | null } | null>(null);
     const [detalheStats, setDetalheStats] = useState<Estatisticas | null>(null);
     const [detalheLoading, setDetalheLoading] = useState(false);
     const [detalheErr, setDetalheErr] = useState<string | null>(null);
 
-    async function abrirDetalheMembro(m: { usuarioId: number; nome: string; papel?: string; ativo?: boolean }) {
+    async function abrirDetalheMembro(m: { usuarioId: number; nome: string; papel?: string; ativo?: boolean; fotoPerfil?: string | null }) {
         setDetalheMembro(m);
         setDetalheStats(null);
         setDetalheErr(null);
@@ -645,9 +646,12 @@ export default function EquipeDetalhePage() {
                                         className={`x-row ${m.ativo ? "" : "dim"}`}
                                         style={medal >= 0 ? { borderLeft: `3px solid ${medalColor}` } : undefined}
                                     >
-                                        <div className="x-avatar sm" style={medal >= 0 ? { boxShadow: `0 0 0 2px ${medalColor}` } : undefined}>
-                                            {String(m.nome || "?").trim().charAt(0).toUpperCase()}
-                                        </div>
+                                        <UserAvatar
+                                            nome={m.nome}
+                                            fotoPerfil={m.fotoPerfil}
+                                            size="sm"
+                                            style={medal >= 0 ? { boxShadow: `0 0 0 2px ${medalColor}` } : undefined}
+                                        />
                                         <div className="x-row-main">
                                             <div className="x-row-name" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                                                 {medal >= 0 && (
@@ -687,6 +691,7 @@ export default function EquipeDetalhePage() {
                                                     nome: m.nome,
                                                     papel: m.papel,
                                                     ativo: m.ativo,
+                                                    fotoPerfil: m.fotoPerfil,
                                                 })}
                                                 title="Ver detalhes e estatísticas"
                                             >
@@ -936,9 +941,11 @@ export default function EquipeDetalhePage() {
                     <div className="x-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="x-eyebrow">Jogador</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12, marginBottom: 8 }}>
-                            <div className="x-avatar">
-                                {String(detalheMembro.nome || "?").trim().charAt(0).toUpperCase()}
-                            </div>
+                            <UserAvatar
+                                nome={detalheMembro.nome}
+                                fotoPerfil={detalheMembro.fotoPerfil}
+                                size="md"
+                            />
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <h3 className="x-modal-title" style={{ margin: 0 }}>{detalheMembro.nome}</h3>
                                 <div className="x-row-meta" style={{ marginTop: 6 }}>
@@ -1019,9 +1026,7 @@ export default function EquipeDetalhePage() {
                                             <div className="x-list">
                                                 {detalheStats.parceirosFrequentes.slice(0, 3).map((pp) => (
                                                     <div key={pp.usuarioId} className="x-row">
-                                                        <div className="x-avatar sm">
-                                                            {String(pp.nome || "?").trim().charAt(0).toUpperCase()}
-                                                        </div>
+                                                        <UserAvatar nome={pp.nome} fotoPerfil={pp.fotoPerfil} size="sm" />
                                                         <div className="x-row-main">
                                                             <div className="x-row-name">{pp.nome}</div>
                                                             <div className="x-row-meta">

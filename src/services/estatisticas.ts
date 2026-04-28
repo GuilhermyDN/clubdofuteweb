@@ -11,6 +11,7 @@ export type ParceiroFrequente = {
     usuarioId: number;
     nome: string;
     totalPartidasJuntos: number;
+    fotoPerfil?: string | null;
 };
 
 export type Estatisticas = {

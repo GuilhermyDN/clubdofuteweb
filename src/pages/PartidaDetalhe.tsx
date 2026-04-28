@@ -7,10 +7,12 @@ import {
 import { getEquipe } from "../services/equipe";
 import { api } from "../services/api";
 import AppHeader from "../components/AppHeader";
+import UserAvatar from "../components/UserAvatar";
+import UserDetalheModal from "../components/UserDetalheModal";
 import { toast } from "../components/Toast";
 import { explainError, isAuthError } from "../utils/errors";
 
-type Presenca = { usuarioId: number; nome: string; statusPresenca: "CONFIRMADO" | "CANCELADO" | string; };
+type Presenca = { usuarioId: number; nome: string; statusPresenca: "CONFIRMADO" | "CANCELADO" | string; fotoPerfil?: string | null; };
 type TimeJogador = { usuarioId: number; nome: string; nota: number; };
 type TimeGerado = { numero: number; jogadores: TimeJogador[]; };
 type TimesGerados = { id: number; partidaId: number; times: TimeGerado[]; reservas: TimeJogador[]; geradoEm: string; };
@@ -67,6 +69,7 @@ export default function PartidaDetalhePage() {
 
     const PAGE_SIZE = 10;
     const [page, setPage] = useState(1);
+    const [userDetalhe, setUserDetalhe] = useState<{ usuarioId: number; nome: string; fotoPerfil?: string | null } | null>(null);
 
     async function load() {
         if (!partidaId) { setLoadErr("ID de partida ausente."); return; }
@@ -465,9 +468,7 @@ export default function PartidaDetalhePage() {
                                     const isOk = p.statusPresenca === "CONFIRMADO";
                                     return (
                                         <div key={p.usuarioId} className={`x-row ${isOk ? "" : "dim"}`}>
-                                            <div className="x-avatar sm">
-                                                {String(p.nome || "?").trim().charAt(0).toUpperCase()}
-                                            </div>
+                                            <UserAvatar nome={p.nome} fotoPerfil={p.fotoPerfil} size="sm" />
                                             <div className="x-row-main">
                                                 <div className="x-row-name">
                                                     {p.nome}
@@ -476,6 +477,15 @@ export default function PartidaDetalhePage() {
                                                 <div className="x-row-meta">
                                                     <span className={`x-pill ${isOk ? "success" : ""}`}>{p.statusPresenca}</span>
                                                 </div>
+                                            </div>
+                                            <div className="x-row-actions">
+                                                <button
+                                                    className="x-btn ghost sm"
+                                                    onClick={() => setUserDetalhe({ usuarioId: p.usuarioId, nome: p.nome, fotoPerfil: p.fotoPerfil })}
+                                                    title="Ver detalhes"
+                                                >
+                                                    Detalhes
+                                                </button>
                                             </div>
                                         </div>
                                     );
@@ -577,6 +587,15 @@ export default function PartidaDetalhePage() {
                     </div>
                 </div>
             </main>
+
+            {userDetalhe && (
+                <UserDetalheModal
+                    usuarioId={userDetalhe.usuarioId}
+                    nome={userDetalhe.nome}
+                    fotoPerfil={userDetalhe.fotoPerfil}
+                    onClose={() => setUserDetalhe(null)}
+                />
+            )}
         </div>
     );
 }
