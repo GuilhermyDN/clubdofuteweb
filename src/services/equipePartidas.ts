@@ -7,6 +7,8 @@ export type PartidaResumo = {
   dataHora: string;
   statusPartida: string;
   totalConfirmados: number;
+  limiteParticipantes?: number | null;
+  jogadoresPorTime?: number | null;
 };
 
 export type CriarPartidaBody = {

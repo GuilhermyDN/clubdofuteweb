@@ -287,6 +287,8 @@ export default function EquipePartidasPage() {
                                 const now = Date.now();
                                 const isFuture = !Number.isNaN(ts) && ts >= now;
                                 const { dia, mes, hora, weekday } = fmtDateBox(p.dataHora);
+                                const limite = p.limiteParticipantes ?? null;
+                                const vagas = limite != null ? Math.max(0, limite - (p.totalConfirmados ?? 0)) : null;
 
                                 return (
                                     <button key={p.id} className="x-list-item" onClick={() => nav(`/partidas/${p.id}`)}>
@@ -299,7 +301,16 @@ export default function EquipePartidasPage() {
                                                 {weekday} · {hora}
                                             </div>
                                             <div className="x-list-item-sub">
-                                                <span>{p.totalConfirmados} confirmado{p.totalConfirmados !== 1 ? "s" : ""}</span>
+                                                <span style={{ color: "var(--x-accent)", fontWeight: 700 }}>
+                                                    {p.totalConfirmados ?? 0}
+                                                    {limite != null ? ` de ${limite}` : ""} confirmado{(p.totalConfirmados ?? 0) !== 1 ? "s" : ""}
+                                                </span>
+                                                {vagas != null && (
+                                                    <>
+                                                        <span className="sep">·</span>
+                                                        <span>{vagas} vaga{vagas !== 1 ? "s" : ""}</span>
+                                                    </>
+                                                )}
                                                 <span className="sep">·</span>
                                                 {isFuture ? (
                                                     <span className="x-pill accent" style={{ padding: "3px 8px", fontSize: 9 }}>Próxima</span>
