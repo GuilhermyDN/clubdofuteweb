@@ -110,7 +110,8 @@ export default function EquipesPage() {
             diasHorariosPadrao: diasHorariosPadraoStr,
         };
         if (!payload.nome) return toast.warn("Nome da equipe é obrigatório.");
-        if (!payload.cepOuLocal) return toast.warn("Local é obrigatório.");
+        if (!payload.cepOuLocal) return toast.warn("CEP é obrigatório.");
+        if (!/^\d{8}$/.test(payload.cepOuLocal)) return toast.warn("CEP deve ter 8 dígitos.");
         if (!payload.diasHorariosPadrao) return toast.warn("Habilite ao menos um dia na agenda padrão.");
         if (payload.statusEquipe === "FECHADA") {
             const s = normalizeStr(create.senhaEquipe ?? "");
@@ -255,18 +256,15 @@ export default function EquipesPage() {
                                 </div>
 
                                 <div className="x-field">
-                                    <label>Local (CEP ou descrição)</label>
+                                    <label>CEP</label>
                                     <input
                                         className="x-input"
-                                        placeholder="00000-000 ou 'Praia do Canto · quadra 3'"
+                                        placeholder="00000-000"
+                                        inputMode="numeric"
+                                        autoComplete="postal-code"
                                         value={maskCepOuLocal(create.cepOuLocal)}
                                         onChange={(e) => {
-                                            const v = e.target.value;
-                                            if (/^\d*$/.test(v)) {
-                                                setCreateField("cepOuLocal", v.replace(/\D/g, "").slice(0, 8));
-                                            } else {
-                                                setCreateField("cepOuLocal", v);
-                                            }
+                                            setCreateField("cepOuLocal", e.target.value.replace(/\D/g, "").slice(0, 8));
                                         }}
                                     />
                                 </div>
