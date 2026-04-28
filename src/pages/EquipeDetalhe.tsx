@@ -38,6 +38,47 @@ function fmtCEP(s?: string | null) {
     if (digits.length === 8) return `${digits.slice(0, 5)}-${digits.slice(5)}`;
     return s;
 }
+type DiaKey = "segunda" | "terca" | "quarta" | "quinta" | "sexta" | "sabado" | "domingo";
+const DIAS_AGENDA: { key: DiaKey; label: string }[] = [
+    { key: "segunda", label: "segunda" },
+    { key: "terca", label: "terça" },
+    { key: "quarta", label: "quarta" },
+    { key: "quinta", label: "quinta" },
+    { key: "sexta", label: "sexta" },
+    { key: "sabado", label: "sábado" },
+    { key: "domingo", label: "domingo" },
+];
+type AgendaState = Record<DiaKey, { enabled: boolean; time: string }>;
+const AGENDA_VAZIA: AgendaState = {
+    segunda: { enabled: false, time: "19:00" },
+    terca: { enabled: false, time: "19:00" },
+    quarta: { enabled: false, time: "19:00" },
+    quinta: { enabled: false, time: "19:00" },
+    sexta: { enabled: false, time: "19:00" },
+    sabado: { enabled: false, time: "09:00" },
+    domingo: { enabled: false, time: "09:00" },
+};
+function parseAgenda(s?: string | null): AgendaState {
+    const next: AgendaState = JSON.parse(JSON.stringify(AGENDA_VAZIA));
+    if (!s) return next;
+    s.split(",").map((p) => p.trim()).filter(Boolean).forEach((p) => {
+        const [diaRaw, horaRaw] = p.split("-");
+        const dia = (diaRaw ?? "").toLowerCase() as DiaKey;
+        if (!(dia in next)) return;
+        next[dia].enabled = true;
+        if (horaRaw && /^\d{1,2}:\d{2}$/.test(horaRaw.trim())) {
+            next[dia].time = horaRaw.trim();
+        }
+    });
+    return next;
+}
+function agendaToStr(a: AgendaState): string {
+    return DIAS_AGENDA
+        .filter((d) => a[d.key].enabled)
+        .map((d) => `${d.key}-${a[d.key].time}`)
+        .join(",");
+}
+
 function LockIcon({ open, size = 22 }: { open: boolean; size?: number }) {
     return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -98,6 +139,7 @@ export default function EquipeDetalhePage() {
         nome: "", cepOuLocal: "", esporte: "VOLEI" as Esporte,
         statusEquipe: "ABERTA" as StatusEquipe, diasHorariosPadrao: "",
     });
+    const [editAgenda, setEditAgenda] = useState<AgendaState>(AGENDA_VAZIA);
     const [salvandoEdit, setSalvandoEdit] = useState(false);
 
     // confirmação de excluir equipe
@@ -113,20 +155,23 @@ export default function EquipeDetalhePage() {
             statusEquipe: data.statusEquipe,
             diasHorariosPadrao: data.diasHorariosPadrao ?? "",
         });
+        setEditAgenda(parseAgenda(data.diasHorariosPadrao));
         setShowEditar(true);
     }
 
     async function handleSalvarEdicao() {
         if (!equipeId) return;
+        const agendaStr = agendaToStr(editAgenda);
         const body = {
             nome: editForm.nome.trim(),
-            cepOuLocal: editForm.cepOuLocal.trim(),
+            cepOuLocal: editForm.cepOuLocal.trim().replace(/\D/g, "").slice(0, 8) || editForm.cepOuLocal.trim(),
             esporte: editForm.esporte,
             statusEquipe: editForm.statusEquipe,
-            diasHorariosPadrao: editForm.diasHorariosPadrao.trim(),
+            diasHorariosPadrao: agendaStr,
         };
         if (!body.nome) { toast.warn("Nome é obrigatório."); return; }
-        if (!body.cepOuLocal) { toast.warn("Local é obrigatório."); return; }
+        if (!body.cepOuLocal) { toast.warn("CEP é obrigatório."); return; }
+        if (!agendaStr) { toast.warn("Habilite ao menos um dia na agenda."); return; }
         try {
             setSalvandoEdit(true);
             await atualizarEquipe(equipeId, body);
@@ -692,11 +737,22 @@ export default function EquipeDetalhePage() {
                                 />
                             </div>
                             <div className="x-field">
-                                <label>Local</label>
+                                <label>CEP</label>
                                 <input
                                     className="x-input"
-                                    value={editForm.cepOuLocal}
-                                    onChange={(e) => setEditForm((p) => ({ ...p, cepOuLocal: e.target.value }))}
+                                    placeholder="00000-000"
+                                    inputMode="numeric"
+                                    autoComplete="postal-code"
+                                    value={(() => {
+                                        const v = editForm.cepOuLocal ?? "";
+                                        const nums = v.replace(/\D/g, "");
+                                        if (/^\d+-?\d*$/.test(v) || nums.length > 0 && nums === v.replace(/-/g, "")) {
+                                            const n = nums.slice(0, 8);
+                                            return n.length <= 5 ? n : `${n.slice(0, 5)}-${n.slice(5)}`;
+                                        }
+                                        return v;
+                                    })()}
+                                    onChange={(e) => setEditForm((p) => ({ ...p, cepOuLocal: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
                                 />
                             </div>
                             <div className="x-form-grid">
@@ -723,14 +779,40 @@ export default function EquipeDetalhePage() {
                                     </select>
                                 </div>
                             </div>
-                            <div className="x-field">
-                                <label>Agenda padrão</label>
-                                <input
-                                    className="x-input"
-                                    placeholder="ex: sabado-09:00,quarta-19:00"
-                                    value={editForm.diasHorariosPadrao}
-                                    onChange={(e) => setEditForm((p) => ({ ...p, diasHorariosPadrao: e.target.value }))}
-                                />
+                            <div>
+                                <label className="x-label" style={{ display: "block", marginBottom: 10 }}>
+                                    Agenda padrão
+                                </label>
+                                <div className="x-agenda">
+                                    {DIAS_AGENDA.map((d) => {
+                                        const item = editAgenda[d.key];
+                                        return (
+                                            <div key={d.key} className={`x-agenda-row ${item.enabled ? "on" : ""}`}>
+                                                <label className="x-agenda-day">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={item.enabled}
+                                                        onChange={(e) => {
+                                                            const enabled = e.target.checked;
+                                                            setEditAgenda((prev) => ({ ...prev, [d.key]: { ...prev[d.key], enabled } }));
+                                                        }}
+                                                    />
+                                                    <span>{d.label}</span>
+                                                </label>
+                                                <input
+                                                    type="time"
+                                                    className="x-agenda-time"
+                                                    value={item.time}
+                                                    disabled={!item.enabled}
+                                                    onChange={(e) => {
+                                                        const time = e.target.value;
+                                                        setEditAgenda((prev) => ({ ...prev, [d.key]: { ...prev[d.key], time } }));
+                                                    }}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
 
