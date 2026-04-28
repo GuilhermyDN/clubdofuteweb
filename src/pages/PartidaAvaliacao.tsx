@@ -269,90 +269,66 @@ export default function PartidaAvaliacaoPage() {
                     )}
 
                     {jogadores.length > 0 && (
-                        <div className="x-wizard x-reveal">
-                            {/* Stepper */}
-                            <div className="x-wizard-head">
-                                <div className="x-wizard-step-label">
-                                    Jogador <strong>{currentIdx + 1}</strong> de <strong>{jogadores.length}</strong>
-                                </div>
-                                <div className="x-wizard-dots">
-                                    {jogadores.map((j, i) => {
-                                        const has = typeof notasPorUsuario[j.usuarioId] === "number";
-                                        const cur = i === currentIdx;
-                                        return (
-                                            <button
-                                                key={j.usuarioId}
-                                                type="button"
-                                                className={`x-wizard-dot ${cur ? "cur" : ""} ${has ? "has" : ""}`}
-                                                onClick={() => setCurrentIdx(i)}
-                                                aria-label={`Ir para ${j.nome}`}
-                                            />
-                                        );
-                                    })}
-                                </div>
+                        <div className="x-reveal">
+                            <div className="x-card-title" style={{ marginBottom: 10 }}>
+                                Avaliados
+                                <span className="x-pill">
+                                    {jogadores.length - faltando.length}/{jogadores.length}
+                                </span>
                             </div>
-
-                            <div className="x-progress" aria-hidden>
+                            <div className="x-progress" aria-hidden style={{ marginBottom: 18 }}>
                                 <div className="x-progress-fill" style={{ width: `${progress}%` }} />
                             </div>
 
-                            {currentJogador && (
-                                <div className="x-wizard-card">
-                                    <div className="x-wizard-team">
-                                        <UserAvatar nome={currentJogador.nome} fotoPerfil={currentJogador.fotoPerfil} size="lg" />
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <h3 className="x-wizard-team-name">{currentJogador.nome}</h3>
-                                            <div className="x-wizard-team-sub">
-                                                {currentJogador.timeNumero != null
-                                                    ? `Time ${currentJogador.timeNumero}`
-                                                    : "Reserva"}
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                {jogadores.map((j) => {
+                                    const nota = notasPorUsuario[j.usuarioId] ?? 0;
+                                    return (
+                                        <div key={j.usuarioId} className="x-card" style={{ padding: 14 }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                                                <UserAvatar nome={j.nome} fotoPerfil={j.fotoPerfil} size="md" />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontWeight: 700, fontSize: 15 }}>{j.nome}</div>
+                                                    <div className="x-meta" style={{ fontSize: 12 }}>
+                                                        {j.timeNumero != null ? `Time ${j.timeNumero}` : "Reserva"}
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="x-btn ghost sm"
+                                                    onClick={() => setUserDetalhe({ usuarioId: j.usuarioId, nome: j.nome, fotoPerfil: j.fotoPerfil })}
+                                                    title="Ver detalhes"
+                                                >
+                                                    Detalhes
+                                                </button>
+                                            </div>
+                                            <div style={{ display: "flex", justifyContent: "center" }}>
+                                                <StarRating
+                                                    value={nota}
+                                                    onChange={(v) => setNotaJogador(j.usuarioId, v)}
+                                                    disabled={!podeInteragir}
+                                                    size={36}
+                                                />
                                             </div>
                                         </div>
-                                        <button
-                                            type="button"
-                                            className="x-btn ghost sm"
-                                            onClick={() => setUserDetalhe({ usuarioId: currentJogador.usuarioId, nome: currentJogador.nome, fotoPerfil: currentJogador.fotoPerfil })}
-                                            title="Ver detalhes"
-                                        >
-                                            Detalhes
-                                        </button>
-                                    </div>
+                                    );
+                                })}
+                            </div>
 
-                                    <div className="x-wizard-rating">
-                                        <div className="x-wizard-rating-label">Como foi a atuação deste jogador?</div>
-                                        <StarRating
-                                            value={notaLocal}
-                                            onChange={(v) => setNotaJogador(currentJogador.usuarioId, v)}
-                                            disabled={!podeInteragir}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="x-wizard-nav">
+                            <div style={{ display: "flex", justifyContent: "center", marginTop: 22 }}>
                                 <button
-                                    className="x-btn ghost"
-                                    onClick={goPrev}
-                                    disabled={isFirst}
+                                    className="x-btn lg"
+                                    onClick={onEnviar}
+                                    disabled={!podeInteragir || sending || !allRated}
+                                    title={!allRated ? `Faltam ${faltando.length} jogador(es)` : undefined}
                                 >
-                                    ← Anterior
-                                </button>
-                                <button
-                                    className="x-btn"
-                                    onClick={goNextOrSend}
-                                    disabled={!podeInteragir || sending || (isLast && !currentRated)}
-                                >
-                                    {sending
-                                        ? "Enviando..."
-                                        : isLast && allRated
-                                            ? "Enviar avaliação"
-                                            : "Próximo"}
+                                    {sending ? "Enviando..." : allRated ? "Enviar avaliação" : `Faltam ${faltando.length}`}
                                     <span className="x-btn-arr">→</span>
                                 </button>
                             </div>
 
-                            <p className="x-wizard-fine">
-                                Suas notas ficam registradas e o site bloqueia nova edição neste dispositivo.
+                            <p className="x-wizard-fine" style={{ marginTop: 14 }}>
+                                Após enviar, suas notas ficam registradas e não podem ser editadas.
                             </p>
                         </div>
                     )}
