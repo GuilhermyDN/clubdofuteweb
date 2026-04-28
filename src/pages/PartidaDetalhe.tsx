@@ -71,6 +71,9 @@ export default function PartidaDetalhePage() {
     const [page, setPage] = useState(1);
     const [userDetalhe, setUserDetalhe] = useState<{ usuarioId: number; nome: string; fotoPerfil?: string | null } | null>(null);
 
+    const [showGerarTimes, setShowGerarTimes] = useState(false);
+    const [jogadoresPorTimeInput, setJogadoresPorTimeInput] = useState<string>("4");
+
     async function load() {
         if (!partidaId) { setLoadErr("ID de partida ausente."); return; }
         setLoadErr(null);
@@ -174,11 +177,28 @@ export default function PartidaDetalhePage() {
         catch (e: any) { if (!isAuthError(e)) toast.error(explainError(e), "Falha ao cancelar"); }
         finally { setActing(false); }
     }
+    function abrirGerarTimes() {
+        const padrao = data?.jogadoresPorTime && data.jogadoresPorTime > 0 ? data.jogadoresPorTime : 4;
+        setJogadoresPorTimeInput(String(padrao));
+        setShowGerarTimes(true);
+    }
+
     async function onFecharListaEGerarTimes() {
         if (!partidaId) return;
-        try { setGenerating(true); await fecharListaEGerarTimes(partidaId); toast.success("Lista fechada e times gerados."); await load(); }
-        catch (e: any) { if (!isAuthError(e)) toast.error(explainError(e), "Falha ao gerar times"); }
-        finally { setGenerating(false); }
+        const n = Number(jogadoresPorTimeInput);
+        if (!Number.isFinite(n) || n <= 0) {
+            toast.warn("Informe quantos jogadores por time (maior que 0).");
+            return;
+        }
+        try {
+            setGenerating(true);
+            await fecharListaEGerarTimes(partidaId, Math.trunc(n));
+            toast.success("Lista fechada e times gerados.");
+            setShowGerarTimes(false);
+            await load();
+        } catch (e: any) {
+            if (!isAuthError(e)) toast.error(explainError(e), "Falha ao gerar times");
+        } finally { setGenerating(false); }
     }
     async function onLiberarAvaliacao() {
         if (!partidaId) return;
@@ -301,7 +321,7 @@ export default function PartidaDetalhePage() {
                                 </div>
                             </div>
                             <div className="x-next-step-actions">
-                                <button className="x-btn" onClick={onFecharListaEGerarTimes} disabled={generating}>
+                                <button className="x-btn" onClick={abrirGerarTimes} disabled={generating}>
                                     {generating ? "Gerando..." : "Fechar e gerar"}
                                     <span className="x-btn-arr">→</span>
                                 </button>
@@ -587,6 +607,49 @@ export default function PartidaDetalhePage() {
                     </div>
                 </div>
             </main>
+
+            {showGerarTimes && (
+                <div className="x-modal-overlay" onClick={() => { if (!generating) setShowGerarTimes(false); }}>
+                    <div className="x-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="x-eyebrow">Gerar times</div>
+                        <h3 className="x-modal-title" style={{ marginTop: 12 }}>Quantos jogadores por time?</h3>
+                        <p className="x-modal-text">
+                            Define o tamanho de cada time pro sorteio. O backend nivela pelas notas dos jogadores.
+                        </p>
+
+                        <div className="x-field" style={{ marginBottom: 16 }}>
+                            <label>Jogadores por time</label>
+                            <input
+                                className="x-input"
+                                type="number"
+                                inputMode="numeric"
+                                min={1}
+                                max={20}
+                                value={jogadoresPorTimeInput}
+                                onChange={(e) => setJogadoresPorTimeInput(e.target.value)}
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="x-modal-actions">
+                            <button
+                                className="x-btn ghost"
+                                onClick={() => setShowGerarTimes(false)}
+                                disabled={generating}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                className="x-btn"
+                                onClick={onFecharListaEGerarTimes}
+                                disabled={generating}
+                            >
+                                {generating ? "Gerando..." : "Fechar lista e gerar"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {userDetalhe && (
                 <UserDetalheModal

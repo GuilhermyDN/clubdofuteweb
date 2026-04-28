@@ -16,8 +16,12 @@ export async function cancelarPresenca(partidaId: string | number) {
   return data;
 }
 
-export async function fecharListaEGerarTimes(partidaId: string | number) {
-  const { data } = await api.post(`/partidas/${partidaId}/fechar-lista-e-gerar-times`);
+export async function fecharListaEGerarTimes(
+  partidaId: string | number,
+  jogadoresPorTime?: number
+) {
+  const body = jogadoresPorTime != null ? { jogadoresPorTime } : undefined;
+  const { data } = await api.post(`/partidas/${partidaId}/fechar-lista-e-gerar-times`, body);
   return data;
 }
 
