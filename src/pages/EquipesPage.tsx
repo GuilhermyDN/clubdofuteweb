@@ -143,6 +143,11 @@ export default function EquipesPage() {
     const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
     const [locating, setLocating] = useState(false);
 
+    const PAGE_SIZE = 10;
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [total, setTotal] = useState(0);
+
     async function ativarPertoDeMim() {
         if (!("geolocation" in navigator)) {
             toast.warn("Seu navegador não suporta geolocalização.");
@@ -173,29 +178,37 @@ export default function EquipesPage() {
         setPertoDeMim(false);
     }
 
-    async function handleBuscar(termo: string = q) {
+    async function handleBuscar(termo: string = q, pageArg: number = page) {
         const qq = normalizeStr(termo);
         try {
             setSearching(true);
             setSearchedOnce(true);
-            const list = await buscarEquipes(
-                qq,
-                pertoDeMim && geo ? { lat: geo.lat, lng: geo.lng } : undefined
-            );
-            setResults(list ?? []);
-            if (!list?.length) { setSelectedId(null); setDetalhe(null); }
+            const res = await buscarEquipes(qq, {
+                ...(pertoDeMim && geo ? { lat: geo.lat, lng: geo.lng } : {}),
+                page: pageArg,
+                pageSize: PAGE_SIZE,
+            });
+            setResults(res.items ?? []);
+            setTotal(res.total ?? 0);
+            setTotalPages(Math.max(1, res.totalPages ?? 1));
+            if (!res.items?.length) { setSelectedId(null); setDetalhe(null); }
         } catch (e: any) {
             if (isAuthError(e)) return;
             toast.error(explainError(e), "Falha na busca");
         } finally { setSearching(false); }
     }
 
-    // debounce: busca 400ms depois que parou de digitar (ou quando muda o filtro perto de mim)
+    // reseta pagina quando muda termo de busca ou filtro
     useEffect(() => {
-        const t = setTimeout(() => { handleBuscar(q); }, 400);
+        setPage(1);
+    }, [q, pertoDeMim, geo]);
+
+    // debounce: busca 400ms depois que parou de digitar / mudar filtro / mudar pagina
+    useEffect(() => {
+        const t = setTimeout(() => { handleBuscar(q, page); }, 400);
         return () => clearTimeout(t);
         /* eslint-disable-next-line */
-    }, [q, pertoDeMim, geo]);
+    }, [q, pertoDeMim, geo, page]);
 
     async function openDetalhe(id: string) {
         setSelectedId(id);
@@ -542,6 +555,32 @@ export default function EquipesPage() {
                                         </div>
                                     </button>
                                 ))}
+                            </div>
+                        )}
+
+                        {results.length > 0 && totalPages > 1 && (
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
+                                <span className="x-meta" style={{ fontSize: 12 }}>
+                                    Página {page} de {totalPages}{total ? ` · ${total} resultado${total === 1 ? "" : "s"}` : ""}
+                                </span>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <button
+                                        type="button"
+                                        className="x-btn ghost sm"
+                                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                        disabled={searching || page <= 1}
+                                    >
+                                        ← Anterior
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="x-btn ghost sm"
+                                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                        disabled={searching || page >= totalPages}
+                                    >
+                                        Próxima →
+                                    </button>
+                                </div>
                             </div>
                         )}
 

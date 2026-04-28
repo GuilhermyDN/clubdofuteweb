@@ -45,18 +45,46 @@ export async function criarEquipe(body: CriarEquipeBody): Promise<EquipeDetalhe>
   return res.data as EquipeDetalhe;
 }
 
+export type BuscarEquipesPage = {
+  items: EquipeResumo[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
 export async function buscarEquipes(
   q: string,
-  opts?: { lat?: number; lng?: number; raioKm?: number }
-): Promise<EquipeResumo[]> {
-  const params: Record<string, string | number> = { q };
+  opts?: { lat?: number; lng?: number; raioKm?: number; page?: number; pageSize?: number }
+): Promise<BuscarEquipesPage> {
+  const page = opts?.page ?? 1;
+  const pageSize = opts?.pageSize ?? 10;
+  const params: Record<string, string | number> = { q, page, pageSize };
   if (opts?.lat != null && opts?.lng != null) {
     params.lat = opts.lat;
     params.lng = opts.lng;
     if (opts.raioKm != null) params.raioKm = opts.raioKm;
   }
   const res = await api.get("/equipes/buscar", { params });
-  return res.data as EquipeResumo[];
+  const raw = res.data;
+
+  // backend ainda pode devolver array puro: encaixa em paginacao "fake"
+  if (Array.isArray(raw)) {
+    return {
+      items: raw as EquipeResumo[],
+      page,
+      pageSize,
+      total: raw.length,
+      totalPages: raw.length < pageSize ? page : page + 1,
+    };
+  }
+
+  const items = (raw?.items ?? raw?.content ?? raw?.data ?? []) as EquipeResumo[];
+  const total = Number(raw?.total ?? raw?.totalElements ?? items.length) || 0;
+  const ps = Number(raw?.pageSize ?? raw?.size ?? pageSize) || pageSize;
+  const pg = Number(raw?.page ?? raw?.number ?? page) || page;
+  const totalPages = Number(raw?.totalPages ?? Math.max(1, Math.ceil(total / ps))) || 1;
+  return { items, page: pg, pageSize: ps, total, totalPages };
 }
 
 export async function getEquipe(equipeId: string): Promise<EquipeDetalhe> {
