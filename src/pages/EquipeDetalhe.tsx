@@ -19,6 +19,35 @@ function fmtISOToBR(iso?: string) {
     if (Number.isNaN(d.getTime())) return null;
     return d.toLocaleString("pt-BR");
 }
+const DIA_ABREV: Record<string, string> = {
+    segunda: "Seg", terca: "Ter", quarta: "Qua", quinta: "Qui",
+    sexta: "Sex", sabado: "Sáb", domingo: "Dom",
+};
+function fmtDiasHorarios(s?: string | null) {
+    if (!s) return null;
+    const parts = s.split(",").map((p) => p.trim()).filter(Boolean);
+    if (!parts.length) return null;
+    return parts.map((p) => {
+        const [dia, hora] = p.split("-");
+        return `${DIA_ABREV[dia?.toLowerCase()] ?? dia} ${hora ?? ""}`.trim();
+    }).join(", ");
+}
+function fmtCEP(s?: string | null) {
+    if (!s) return "";
+    const digits = s.replace(/\D/g, "");
+    if (digits.length === 8) return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+    return s;
+}
+function LockIcon({ open, size = 22 }: { open: boolean; size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            {open
+                ? <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                : <path d="M7 11V7a5 5 0 0 1 10 0v4" />}
+        </svg>
+    );
+}
 function isAdminRole(papel?: string) {
     return papel === "ADMIN" || papel === "ADMINISTRADOR";
 }
@@ -379,11 +408,47 @@ export default function EquipeDetalhePage() {
                     <button className="x-phero-back" onClick={() => nav(-1)}>← Voltar</button>
                     <div className="x-phero-grid">
                         <div>
-                            <h1 className="x-phero-title">{data.nome}</h1>
-                            <div className="x-meta" style={{ marginBottom: 18 }}>{data.cepOuLocal}</div>
-                            <div className="x-phero-meta">
-                                <span className="x-pill">{data.esporte}</span>
-                                <span className="x-pill">{data.statusEquipe}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                                <h1 className="x-phero-title" style={{ margin: 0 }}>{data.nome}</h1>
+                                {typeof data.notaEquipe === "number" && (
+                                    <span style={{
+                                        color: "var(--x-accent)",
+                                        fontWeight: 800,
+                                        fontSize: "1.6rem",
+                                        lineHeight: 1,
+                                        whiteSpace: "nowrap",
+                                    }}>
+                                        ★ {Number(data.notaEquipe).toFixed(1)}
+                                    </span>
+                                )}
+                                <span
+                                    style={{
+                                        display: "inline-flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        gap: 2,
+                                        color: data.statusEquipe === "ABERTA" ? "var(--x-accent)" : "#ff8a8a",
+                                    }}
+                                    title={data.statusEquipe === "ABERTA" ? "Equipe aberta" : "Equipe fechada"}
+                                >
+                                    <LockIcon open={data.statusEquipe === "ABERTA"} />
+                                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase" }}>
+                                        {data.statusEquipe === "ABERTA" ? "Aberta" : "Fechada"}
+                                    </span>
+                                </span>
+                            </div>
+
+                            <div className="x-phero-info" style={{ marginTop: 14, display: "grid", gap: 6, color: "var(--x-meta, #aab)" }}>
+                                <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+                                    <span><strong style={{ color: "#fff", marginRight: 6 }}>CEP</strong>{fmtCEP(data.cepOuLocal) || "—"}</span>
+                                </div>
+                                <div><strong style={{ color: "#fff", marginRight: 6 }}>Esporte</strong>{data.esporte}</div>
+                                <div><strong style={{ color: "#fff", marginRight: 6 }}>Criada em</strong>{criadoEm ?? "—"}</div>
+                                <div><strong style={{ color: "#fff", marginRight: 6 }}>Dias de jogo</strong>{fmtDiasHorarios(data.diasHorariosPadrao) ?? "—"}</div>
+                                <div><strong style={{ color: "#fff", marginRight: 6 }}>Jogos</strong>{totalJogos == null ? "—" : totalJogos}</div>
+                            </div>
+
+                            <div className="x-phero-meta" style={{ marginTop: 14 }}>
                                 {souAdmin && <span className="x-pill accent">Você é admin</span>}
                                 {!souAdmin && souMembro && <span className="x-pill success">Membro</span>}
                             </div>
@@ -437,58 +502,6 @@ export default function EquipeDetalhePage() {
                             <span className="x-stat-mini-val">
                                 {totalJogos == null ? "—" : <CountUp to={totalJogos} />}
                             </span>
-                        </div>
-                        {typeof data.notaEquipe === "number" && (
-                            <div className="x-stat-mini">
-                                <span className="x-stat-mini-lbl">Nota equipe</span>
-                                <span className="x-stat-mini-val" style={{ color: "var(--x-accent)" }}>
-                                    ★ {Number(data.notaEquipe).toFixed(1)}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Info detalhada */}
-                    <div className="x-card" style={{ marginBottom: 24 }}>
-                        <div className="x-card-title">Informações</div>
-                        <hr className="x-divider" />
-                        <div className="x-info-grid">
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">Nome</span>
-                                <span className="x-info-val">{data.nome}</span>
-                            </div>
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">CEP / Local</span>
-                                <span className="x-info-val">{data.cepOuLocal || "—"}</span>
-                            </div>
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">Esporte</span>
-                                <span className="x-info-val">{data.esporte}</span>
-                            </div>
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">Status</span>
-                                <span className="x-info-val">{data.statusEquipe}</span>
-                            </div>
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">Agenda padrão</span>
-                                <span className="x-info-val">{data.diasHorariosPadrao || "—"}</span>
-                            </div>
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">Criada em</span>
-                                <span className="x-info-val">{criadoEm ?? "—"}</span>
-                            </div>
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">Jogos</span>
-                                <span className="x-info-val">{totalJogos == null ? "—" : totalJogos}</span>
-                            </div>
-                            {typeof data.notaEquipe === "number" && (
-                                <div className="x-info-item">
-                                    <span className="x-info-lbl">Nota da equipe</span>
-                                    <span className="x-info-val" style={{ color: "var(--x-accent)" }}>
-                                        ★ {Number(data.notaEquipe).toFixed(1)}
-                                    </span>
-                                </div>
-                            )}
                         </div>
                     </div>
 
