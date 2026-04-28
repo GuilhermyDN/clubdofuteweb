@@ -285,10 +285,19 @@ export default function EquipePartidasPage() {
                             {partidasPaginadas.map((p) => {
                                 const ts = new Date(p.dataHora).getTime();
                                 const now = Date.now();
-                                const isFuture = !Number.isNaN(ts) && ts >= now;
+                                const status = (p.statusPartida ?? "").toUpperCase();
+                                const emAndamento = status === "LISTA_FECHADA" || status === "AVALIACAO_LIBERADA";
+                                const encerrada = status === "ENCERRADA";
+                                const isFuture = !Number.isNaN(ts) && ts >= now && !emAndamento && !encerrada;
                                 const { dia, mes, hora, weekday } = fmtDateBox(p.dataHora);
                                 const limite = p.limiteParticipantes ?? null;
                                 const vagas = limite != null ? Math.max(0, limite - (p.totalConfirmados ?? 0)) : null;
+                                const statusLabel =
+                                    status === "AVALIACAO_LIBERADA" ? "Em avaliação" :
+                                    status === "LISTA_FECHADA" ? "Lista fechada" :
+                                    encerrada ? "Encerrada" :
+                                    isFuture ? "Próxima" : "Histórico";
+                                const statusClass = (status === "AVALIACAO_LIBERADA" || status === "LISTA_FECHADA") ? "accent" : "";
 
                                 return (
                                     <button key={p.id} className="x-list-item" onClick={() => nav(`/partidas/${p.id}`)}>
@@ -312,11 +321,9 @@ export default function EquipePartidasPage() {
                                                     </>
                                                 )}
                                                 <span className="sep">·</span>
-                                                {isFuture ? (
-                                                    <span className="x-pill accent" style={{ padding: "3px 8px", fontSize: 9 }}>Próxima</span>
-                                                ) : (
-                                                    <span className="x-pill" style={{ padding: "3px 8px", fontSize: 9 }}>Histórico</span>
-                                                )}
+                                                <span className={`x-pill ${statusClass}`} style={{ padding: "3px 8px", fontSize: 9 }}>
+                                                    {statusLabel}
+                                                </span>
                                             </div>
                                         </div>
                                         <div className="x-list-item-right">

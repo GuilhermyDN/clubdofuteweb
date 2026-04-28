@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../services/api";
-import { getPartida, enviarAvaliacoesJogadores } from "../services/partidas";
+import { getPartida, enviarAvaliacoesJogadores, getAvaliacoesPartida } from "../services/partidas";
 import AppHeader from "../components/AppHeader";
 import UserAvatar from "../components/UserAvatar";
 import UserDetalheModal from "../components/UserDetalheModal";
@@ -89,7 +89,20 @@ export default function PartidaAvaliacaoPage() {
             }
             if (uid) {
                 const key = sentKey(partidaId, uid);
-                setJaEnviouAvaliacao(localStorage.getItem(key) === "1");
+                let enviou = localStorage.getItem(key) === "1";
+                // checa server-side: se ja existir avaliacao minha pra essa partida, trava
+                if (!enviou) {
+                    try {
+                        const res = await getAvaliacoesPartida(partidaId);
+                        const lista = (res?.avaliacoes ?? []) as Array<any>;
+                        const minha = lista.some((a) => Number(a?.avaliadorUsuarioId ?? a?.usuarioAvaliadorId ?? a?.usuarioId) === uid);
+                        if (minha) {
+                            enviou = true;
+                            localStorage.setItem(key, "1");
+                        }
+                    } catch { /* endpoint pode nao existir; ignora */ }
+                }
+                setJaEnviouAvaliacao(enviou);
             } else { setJaEnviouAvaliacao(false); }
             setGateErr(g);
         } catch (e: any) {

@@ -94,8 +94,8 @@ export default function StarRating({ value, onChange, disabled, size = 48, showN
             </div>
             {showNumber && (
                 <div className="x-stars-ticker" key={tickerPulse}>
-                    <span className="x-stars-current">{display}</span>
-                    <span className="x-stars-max">/10</span>
+                    <span className="x-stars-current">{(display / 2).toFixed(display % 2 === 0 ? 0 : 1)}</span>
+                    <span className="x-stars-max">/5</span>
                 </div>
             )}
         </div>
