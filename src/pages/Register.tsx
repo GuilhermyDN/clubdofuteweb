@@ -33,7 +33,11 @@ type Errors = {
     telefone?: string;
     cep?: string;
     senha?: string;
+    notaVolei?: string;
+    notaFutevolei?: string;
 };
+
+const NOTA_OPTIONS = Array.from({ length: 11 }, (_, i) => i);
 
 export default function Register() {
     const nav = useNavigate();
@@ -43,6 +47,8 @@ export default function Register() {
     const [telefone, setTelefone] = useState("");
     const [cep, setCep] = useState("");
     const [senha, setSenha] = useState("");
+    const [notaVolei, setNotaVolei] = useState("");
+    const [notaFutevolei, setNotaFutevolei] = useState("");
     const [showPass, setShowPass] = useState(false);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Errors>({});
@@ -64,6 +70,9 @@ export default function Register() {
 
         if (!senha) e.senha = "Crie uma senha.";
         else if (senha.length < 8) e.senha = "Mínimo de 8 caracteres.";
+
+        if (notaVolei === "") e.notaVolei = "Informe sua nota.";
+        if (notaFutevolei === "") e.notaFutevolei = "Informe sua nota.";
         return e;
     }
 
@@ -78,7 +87,14 @@ export default function Register() {
 
         try {
             setLoading(true);
-            const data = await cadastrar({ nome: nome.trim(), telefone, cep, senha });
+            const data = await cadastrar({
+                nome: nome.trim(),
+                telefone,
+                cep,
+                senha,
+                notaVolei: Number(notaVolei),
+                notaFutevolei: Number(notaFutevolei),
+            });
 
             // se o cadastro já retornar token, pula o modal e vai direto pro app
             const tokenDireto = data?.token || data?.accessToken || data?.jwt;
@@ -222,6 +238,38 @@ export default function Register() {
                                 </button>
                             </div>
                             {errors.senha && <div className="x-field-error">⚠ {errors.senha}</div>}
+                        </div>
+
+                        <div className="x-field">
+                            <label>Qual nota você avalia seu Vôlei (0-10)</label>
+                            <select
+                                className={`x-select ${errors.notaVolei ? "has-err" : ""}`}
+                                value={notaVolei}
+                                onChange={(e) => {
+                                    setNotaVolei(e.target.value);
+                                    if (errors.notaVolei) setErrors((p) => ({ ...p, notaVolei: undefined }));
+                                }}
+                            >
+                                <option value="">—</option>
+                                {NOTA_OPTIONS.map((n) => <option key={n} value={String(n)}>{n}</option>)}
+                            </select>
+                            {errors.notaVolei && <div className="x-field-error">⚠ {errors.notaVolei}</div>}
+                        </div>
+
+                        <div className="x-field">
+                            <label>Qual nota você avalia seu Futevôlei (0-10)</label>
+                            <select
+                                className={`x-select ${errors.notaFutevolei ? "has-err" : ""}`}
+                                value={notaFutevolei}
+                                onChange={(e) => {
+                                    setNotaFutevolei(e.target.value);
+                                    if (errors.notaFutevolei) setErrors((p) => ({ ...p, notaFutevolei: undefined }));
+                                }}
+                            >
+                                <option value="">—</option>
+                                {NOTA_OPTIONS.map((n) => <option key={n} value={String(n)}>{n}</option>)}
+                            </select>
+                            {errors.notaFutevolei && <div className="x-field-error">⚠ {errors.notaFutevolei}</div>}
                         </div>
                     </div>
 

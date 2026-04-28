@@ -87,12 +87,9 @@ export default function EuPage() {
     const [cep, setCep] = useState("");
     const [peso, setPeso] = useState("");
     const [altura, setAltura] = useState("");
-    const [notaVolei, setNotaVolei] = useState("");
-    const [notaFutevolei, setNotaFutevolei] = useState("");
 
     const originalRef = useRef<{
         telefone: string; cep: string; peso: number | null; altura: number | null;
-        notaVolei: number | null; notaFutevolei: number | null;
     } | null>(null);
 
     async function load() {
@@ -113,16 +110,12 @@ export default function EuPage() {
                 cep: normStrToStr(d.cep),
                 peso: normNumOrNull(d.peso),
                 altura: normNumOrNull(d.altura),
-                notaVolei: normNumOrNull(d.notaVolei),
-                notaFutevolei: normNumOrNull(d.notaFutevolei),
             };
             originalRef.current = o;
             setTelefone(maskTelefone(o.telefone));
             setCep(maskCEP(o.cep));
             setPeso(o.peso === null ? "" : maskPeso(String(o.peso).replace(/\D/g, "")));
             setAltura(o.altura === null ? "" : maskAltura(String(o.altura).replace(/\D/g, "")));
-            setNotaVolei(o.notaVolei === null ? "" : String(o.notaVolei));
-            setNotaFutevolei(o.notaFutevolei === null ? "" : String(o.notaFutevolei));
         } catch (e: any) {
             if (isAuthError(e)) return; // interceptor já redireciona
             toast.error(explainError(e), "Falha ao carregar perfil");
@@ -143,25 +136,13 @@ export default function EuPage() {
     }, [data?.nome]);
 
     const normalized = useMemo(() => {
-        const notaStrToIntOrNull = (s: string) => {
-            const t = (s ?? "").trim();
-            if (!t) return null;
-            const n = Number(t);
-            if (!Number.isFinite(n)) return null;
-            const i = Math.trunc(n);
-            if (i < 0) return 0;
-            if (i > 10) return 10;
-            return i;
-        };
         return {
             telefone: normStrToStr(telefone),
             cep: normStrToStr(cep),
             peso: peso.trim() ? toNumOrNull(peso) : null,
             altura: altura.trim() ? toNumOrNull(altura) : null,
-            notaVolei: notaStrToIntOrNull(notaVolei),
-            notaFutevolei: notaStrToIntOrNull(notaFutevolei),
         };
-    }, [telefone, cep, peso, altura, notaVolei, notaFutevolei]);
+    }, [telefone, cep, peso, altura]);
 
     const hasChanges = useMemo(() => {
         const o = originalRef.current;
@@ -170,9 +151,7 @@ export default function EuPage() {
             o.telefone !== normalized.telefone ||
             o.cep !== normalized.cep ||
             o.peso !== normalized.peso ||
-            o.altura !== normalized.altura ||
-            o.notaVolei !== normalized.notaVolei ||
-            o.notaFutevolei !== normalized.notaFutevolei
+            o.altura !== normalized.altura
         );
     }, [normalized]);
 
@@ -186,8 +165,6 @@ export default function EuPage() {
         if (o.cep !== normalized.cep) patch.cep = normalized.cep;
         if (o.peso !== normalized.peso) patch.peso = normalized.peso ?? 0;
         if (o.altura !== normalized.altura) patch.altura = normalized.altura ?? 0;
-        if (o.notaVolei !== normalized.notaVolei) patch.notaVolei = normalized.notaVolei ?? 0;
-        if (o.notaFutevolei !== normalized.notaFutevolei) patch.notaFutevolei = normalized.notaFutevolei ?? 0;
 
         try {
             setSaving(true);
@@ -210,13 +187,9 @@ export default function EuPage() {
             setCep(maskCEP(o.cep));
             setPeso(o.peso === null ? "" : maskPeso(String(o.peso).replace(/\D/g, "")));
             setAltura(o.altura === null ? "" : maskAltura(String(o.altura).replace(/\D/g, "")));
-            setNotaVolei(o.notaVolei === null ? "" : String(o.notaVolei));
-            setNotaFutevolei(o.notaFutevolei === null ? "" : String(o.notaFutevolei));
         }
         setEditMode(false);
     }
-
-    const notaOptions = useMemo(() => Array.from({ length: 11 }, (_, i) => i), []);
 
     if (loading) {
         return (
@@ -391,20 +364,6 @@ export default function EuPage() {
                                     readOnly={!editMode}
                                     disabled={!editMode}
                                 />
-                            </div>
-                            <div className="x-field">
-                                <label>Nota Vôlei</label>
-                                <select className="x-select" value={notaVolei} onChange={(e) => setNotaVolei(e.target.value)} disabled={!editMode}>
-                                    <option value="">—</option>
-                                    {notaOptions.map((n) => <option key={n} value={String(n)}>{n}</option>)}
-                                </select>
-                            </div>
-                            <div className="x-field">
-                                <label>Nota Futevôlei</label>
-                                <select className="x-select" value={notaFutevolei} onChange={(e) => setNotaFutevolei(e.target.value)} disabled={!editMode}>
-                                    <option value="">—</option>
-                                    {notaOptions.map((n) => <option key={n} value={String(n)}>{n}</option>)}
-                                </select>
                             </div>
                         </div>
 

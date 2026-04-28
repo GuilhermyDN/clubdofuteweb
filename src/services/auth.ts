@@ -6,6 +6,8 @@ export async function cadastrar(data: {
     telefone: string;
     cep: string;
     senha: string;
+    notaVolei: number;
+    notaFutevolei: number;
 }) {
     const res = await api.post("/autenticacao/cadastrar", data);
     return res.data;
