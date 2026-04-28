@@ -139,12 +139,49 @@ export default function EquipesPage() {
     const [joining, setJoining] = useState(false);
     const [senhaEntrada, setSenhaEntrada] = useState("");
 
+    const [pertoDeMim, setPertoDeMim] = useState(false);
+    const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+    const [locating, setLocating] = useState(false);
+
+    async function ativarPertoDeMim() {
+        if (!("geolocation" in navigator)) {
+            toast.warn("Seu navegador não suporta geolocalização.");
+            return;
+        }
+        setLocating(true);
+        try {
+            const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: false,
+                    timeout: 10000,
+                    maximumAge: 5 * 60 * 1000,
+                });
+            });
+            setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            setPertoDeMim(true);
+        } catch (err: any) {
+            if (err?.code === 1) toast.warn("Permissão de localização negada.");
+            else toast.warn("Não foi possível obter sua localização.");
+            setPertoDeMim(false);
+            setGeo(null);
+        } finally {
+            setLocating(false);
+        }
+    }
+
+    function desativarPertoDeMim() {
+        setPertoDeMim(false);
+    }
+
     async function handleBuscar(termo: string = q) {
         const qq = normalizeStr(termo);
         try {
             setSearching(true);
             setSearchedOnce(true);
-            const list = await buscarEquipes(qq);
+            const list = await buscarEquipes(
+                qq,
+                pertoDeMim && geo ? { lat: geo.lat, lng: geo.lng } : undefined
+            );
             setResults(list ?? []);
             if (!list?.length) { setSelectedId(null); setDetalhe(null); }
         } catch (e: any) {
@@ -153,12 +190,12 @@ export default function EquipesPage() {
         } finally { setSearching(false); }
     }
 
-    // debounce: busca 400ms depois que parou de digitar
+    // debounce: busca 400ms depois que parou de digitar (ou quando muda o filtro perto de mim)
     useEffect(() => {
         const t = setTimeout(() => { handleBuscar(q); }, 400);
         return () => clearTimeout(t);
         /* eslint-disable-next-line */
-    }, [q]);
+    }, [q, pertoDeMim, geo]);
 
     async function openDetalhe(id: string) {
         setSelectedId(id);
@@ -434,6 +471,27 @@ export default function EquipesPage() {
                                 >
                                     ×
                                 </button>
+                            )}
+                        </div>
+
+                        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
+                            <button
+                                type="button"
+                                className={`x-btn sm ${pertoDeMim ? "" : "ghost"}`}
+                                onClick={pertoDeMim ? desativarPertoDeMim : ativarPertoDeMim}
+                                disabled={locating}
+                                title={pertoDeMim ? "Desativar filtro" : "Filtrar equipes próximas"}
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: "-2px" }}>
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z" />
+                                    <circle cx="12" cy="10" r="3" />
+                                </svg>
+                                {locating ? "Localizando..." : (pertoDeMim ? "Perto de mim ✓" : "Perto de mim")}
+                            </button>
+                            {pertoDeMim && geo && (
+                                <span className="x-meta" style={{ fontSize: 12 }}>
+                                    Ordenando por proximidade
+                                </span>
                             )}
                         </div>
 

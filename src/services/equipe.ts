@@ -45,8 +45,17 @@ export async function criarEquipe(body: CriarEquipeBody): Promise<EquipeDetalhe>
   return res.data as EquipeDetalhe;
 }
 
-export async function buscarEquipes(q: string): Promise<EquipeResumo[]> {
-  const res = await api.get("/equipes/buscar", { params: { q } });
+export async function buscarEquipes(
+  q: string,
+  opts?: { lat?: number; lng?: number; raioKm?: number }
+): Promise<EquipeResumo[]> {
+  const params: Record<string, string | number> = { q };
+  if (opts?.lat != null && opts?.lng != null) {
+    params.lat = opts.lat;
+    params.lng = opts.lng;
+    if (opts.raioKm != null) params.raioKm = opts.raioKm;
+  }
+  const res = await api.get("/equipes/buscar", { params });
   return res.data as EquipeResumo[];
 }
 
