@@ -560,7 +560,10 @@ export default function PartidaDetalhePage() {
                                                                 {isMvp && <span title="MVP" style={{ marginRight: 6 }}>🏆</span>}
                                                                 {j.nome}
                                                             </span>
-                                                            <span className="x-team-player-nota">{j.nota}</span>
+                                                            <span className="x-team-player-nota" title="Nota do jogador" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                                                <span aria-hidden style={{ color: "var(--x-accent)" }}>★</span>
+                                                                {Number(j.nota).toFixed(Number.isInteger(j.nota) ? 0 : 1)}
+                                                            </span>
                                                         </div>
                                                     );
                                                 })}
@@ -580,7 +583,10 @@ export default function PartidaDetalhePage() {
                                                 data.timesGerados.reservas.map((r) => (
                                                     <div className="x-team-player" key={r.usuarioId}>
                                                         <span className="x-team-player-name">{r.nome}</span>
-                                                        <span className="x-team-player-nota">{r.nota}</span>
+                                                        <span className="x-team-player-nota" title="Nota do jogador" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                                            <span aria-hidden style={{ color: "var(--x-accent)" }}>★</span>
+                                                            {Number(r.nota).toFixed(Number.isInteger(r.nota) ? 0 : 1)}
+                                                        </span>
                                                     </div>
                                                 ))
                                             )}
