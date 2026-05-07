@@ -15,6 +15,7 @@ import Beneficios from "../pages/Beneficios";
 import Modalidades from "../pages/Modalidades";
 import ComoFunciona from "../pages/ComoFunciona";
 import ProtectedRoute from "../components/ProtectedRoute";
+import CompletarPerfil from "../pages/CompletarPerfil";
 
 export default function AppRoutes() {
   return (
@@ -30,6 +31,7 @@ export default function AppRoutes() {
         <Route path="/como-funciona" element={<ComoFunciona />} />
 
         {/* Autenticado */}
+        <Route path="/completar-perfil" element={<ProtectedRoute><CompletarPerfil /></ProtectedRoute>} />
         <Route path="/eu" element={<ProtectedRoute><Eu /></ProtectedRoute>} />
         <Route path="/equipes" element={<ProtectedRoute><EquipesPage /></ProtectedRoute>} />
         <Route path="/equipes/:equipeId" element={<ProtectedRoute><EquipeDetalhe /></ProtectedRoute>} />

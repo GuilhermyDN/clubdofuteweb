@@ -101,7 +101,7 @@ export default function Register() {
             if (tokenDireto) {
                 setToken(tokenDireto);
                 toast.success("Bem-vindo ao clube!", "Conta criada");
-                nav("/eu", { replace: true });
+                nav("/completar-perfil", { replace: true });
                 return;
             }
 
@@ -112,7 +112,7 @@ export default function Register() {
                 if (token) {
                     setToken(token);
                     toast.success("Bem-vindo ao clube!", "Conta criada");
-                    nav("/eu", { replace: true });
+                    nav("/completar-perfil", { replace: true });
                     return;
                 }
             } catch {

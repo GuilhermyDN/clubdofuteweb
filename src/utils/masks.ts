@@ -16,20 +16,26 @@ export function maskCEP(v: string): string {
     return `${nums.slice(0, 5)}-${nums.slice(5)}`;
 }
 
-/** Altura em metros: 1.85 (máx 3 dígitos) */
+/** Altura em metros: X.XX — dígitos auto-formatados, primeiro dígito máx 2 (limite @Max(3)) */
 export function maskAltura(v: string): string {
     const nums = (v ?? "").replace(/\D/g, "").slice(0, 3);
-    if (nums.length <= 1) return nums;
-    if (nums.length === 2) return `${nums[0]}.${nums[1]}`;
-    return `${nums[0]}.${nums.slice(1)}`;
+    if (nums.length === 0) return "";
+    const first = String(Math.min(parseInt(nums[0], 10), 2));
+    const rest = nums.slice(1);
+    if (nums.length === 1) return first;
+    return `${first}.${rest}`;
 }
 
-/** Peso em kg: 75.5 (3 dígitos inteiros + 1 decimal) */
+/** Peso em kg: até 300.X — aceita ponto decimal livre, máx 3 dígitos inteiros + 1 decimal */
 export function maskPeso(v: string): string {
-    const nums = (v ?? "").replace(/\D/g, "").slice(0, 4);
-    if (nums.length === 0) return "";
-    if (nums.length <= 3) return nums;
-    return `${nums.slice(0, 3)}.${nums.slice(3)}`;
+    const raw = (v ?? "").replace(/[^\d.]/g, "");
+    if (!raw) return "";
+    const dotIdx = raw.indexOf(".");
+    if (dotIdx === -1) return raw.slice(0, 3);
+    const intPart = raw.slice(0, dotIdx).slice(0, 3);
+    if (!intPart) return "";
+    const decPart = raw.slice(dotIdx + 1).replace(/\./g, "").slice(0, 1);
+    return `${intPart}.${decPart}`;
 }
 
 /** CEP condicional: se for só números, aplica máscara; caso contrário devolve texto livre (nome de local). */

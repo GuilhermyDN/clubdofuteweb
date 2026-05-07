@@ -114,7 +114,7 @@ export default function EuPage() {
             originalRef.current = o;
             setTelefone(maskTelefone(o.telefone));
             setCep(maskCEP(o.cep));
-            setPeso(o.peso === null ? "" : maskPeso(String(o.peso).replace(/\D/g, "")));
+            setPeso(o.peso === null ? "" : maskPeso(String(o.peso)));
             setAltura(o.altura === null ? "" : maskAltura(String(o.altura).replace(/\D/g, "")));
         } catch (e: any) {
             if (isAuthError(e)) return; // interceptor já redireciona
@@ -185,7 +185,7 @@ export default function EuPage() {
         if (o) {
             setTelefone(maskTelefone(o.telefone));
             setCep(maskCEP(o.cep));
-            setPeso(o.peso === null ? "" : maskPeso(String(o.peso).replace(/\D/g, "")));
+            setPeso(o.peso === null ? "" : maskPeso(String(o.peso)));
             setAltura(o.altura === null ? "" : maskAltura(String(o.altura).replace(/\D/g, "")));
         }
         setEditMode(false);
