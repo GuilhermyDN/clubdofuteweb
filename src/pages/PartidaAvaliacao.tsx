@@ -131,7 +131,6 @@ export default function PartidaAvaliacaoPage() {
     }, [data?.timesGerados, meuId]);
 
     const currentJogador = jogadores[currentIdx] ?? null;
-    const notaLocal = currentJogador ? (notasPorUsuario[currentJogador.usuarioId] ?? 0) : 0;
 
     function setNotaJogador(usuarioId: number, n: number) {
         if (jaEnviouAvaliacao) return;
@@ -191,22 +190,8 @@ export default function PartidaAvaliacaoPage() {
     const currentRated = !!currentJogador && typeof notasPorUsuario[currentJogador.usuarioId] === "number";
     const progress = jogadores.length ? ((jogadores.length - faltando.length) / jogadores.length) * 100 : 0;
 
-    function goPrev() { if (!isFirst) setCurrentIdx((i) => i - 1); }
-    function goNextOrSend() {
-        if (!currentRated && !jaEnviouAvaliacao) {
-            toast.warn("Dê uma nota antes de avançar.");
-            return;
-        }
-        if (!isLast) {
-            setCurrentIdx((i) => i + 1);
-            return;
-        }
-        if (!allRated) {
-            const missingIdx = jogadores.findIndex((j) => !Object.prototype.hasOwnProperty.call(notasPorUsuario, j.usuarioId));
-            if (missingIdx >= 0) { setCurrentIdx(missingIdx); return; }
-        }
-        onEnviar();
-    }
+    // Navegação do wizard antigo removida — UI agora é em lista.
+    void isFirst; void isLast; void currentRated; void currentJogador; void setCurrentIdx; void allRated;
 
     return (
         <div className="x-app">
