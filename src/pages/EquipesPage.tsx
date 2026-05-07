@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import type { CriarEquipeBody, EquipeDetalhe, EquipeResumo, Esporte, StatusEquipe } from "../services/equipe";
 import {
     buscarEquipes, criarEquipe, entrarEquipeAberta, entrarEquipeFechada, getEquipe, listarMinhasEquipes,
@@ -32,6 +32,7 @@ const DIAS: { key: DiaKey; label: string }[] = [
 
 export default function EquipesPage() {
     const nav = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     const [bootLoading, setBootLoading] = useState(true);
     const [minhasEquipes, setMinhasEquipes] = useState<EquipeResumo[]>([]);
@@ -86,6 +87,16 @@ export default function EquipesPage() {
         });
     }
 
+    useEffect(() => {
+        if (searchParams.get("criar") === "1") {
+            abrirFormularioCriar();
+            const next = new URLSearchParams(searchParams);
+            next.delete("criar");
+            setSearchParams(next, { replace: true });
+        }
+        // eslint-disable-next-line
+    }, []);
+
     function setCreateField<K extends keyof CriarEquipeBody>(k: K, v: CriarEquipeBody[K]) {
         setCreate((p) => ({ ...p, [k]: v }));
     }
@@ -99,7 +110,8 @@ export default function EquipesPage() {
             diasHorariosPadrao: diasHorariosPadraoStr,
         };
         if (!payload.nome) return toast.warn("Nome da equipe é obrigatório.");
-        if (!payload.cepOuLocal) return toast.warn("Local é obrigatório.");
+        if (!payload.cepOuLocal) return toast.warn("CEP é obrigatório.");
+        if (!/^\d{8}$/.test(payload.cepOuLocal)) return toast.warn("CEP deve ter 8 dígitos.");
         if (!payload.diasHorariosPadrao) return toast.warn("Habilite ao menos um dia na agenda padrão.");
         if (payload.statusEquipe === "FECHADA") {
             const s = normalizeStr(create.senhaEquipe ?? "");
@@ -127,26 +139,76 @@ export default function EquipesPage() {
     const [joining, setJoining] = useState(false);
     const [senhaEntrada, setSenhaEntrada] = useState("");
 
-    async function handleBuscar(termo: string = q) {
+    const [pertoDeMim, setPertoDeMim] = useState(false);
+    const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+    const [locating, setLocating] = useState(false);
+
+    const PAGE_SIZE = 10;
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [total, setTotal] = useState(0);
+
+    async function ativarPertoDeMim() {
+        if (!("geolocation" in navigator)) {
+            toast.warn("Seu navegador não suporta geolocalização.");
+            return;
+        }
+        setLocating(true);
+        try {
+            const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: false,
+                    timeout: 10000,
+                    maximumAge: 5 * 60 * 1000,
+                });
+            });
+            setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+            setPertoDeMim(true);
+        } catch (err: any) {
+            if (err?.code === 1) toast.warn("Permissão de localização negada.");
+            else toast.warn("Não foi possível obter sua localização.");
+            setPertoDeMim(false);
+            setGeo(null);
+        } finally {
+            setLocating(false);
+        }
+    }
+
+    function desativarPertoDeMim() {
+        setPertoDeMim(false);
+    }
+
+    async function handleBuscar(termo: string = q, pageArg: number = page) {
         const qq = normalizeStr(termo);
         try {
             setSearching(true);
             setSearchedOnce(true);
-            const list = await buscarEquipes(qq);
-            setResults(list ?? []);
-            if (!list?.length) { setSelectedId(null); setDetalhe(null); }
+            const res = await buscarEquipes(qq, {
+                ...(pertoDeMim && geo ? { lat: geo.lat, lng: geo.lng } : {}),
+                page: pageArg,
+                pageSize: PAGE_SIZE,
+            });
+            setResults(res.items ?? []);
+            setTotal(res.total ?? 0);
+            setTotalPages(Math.max(1, res.totalPages ?? 1));
+            if (!res.items?.length) { setSelectedId(null); setDetalhe(null); }
         } catch (e: any) {
             if (isAuthError(e)) return;
             toast.error(explainError(e), "Falha na busca");
         } finally { setSearching(false); }
     }
 
-    // debounce: busca 400ms depois que parou de digitar
+    // reseta pagina quando muda termo de busca ou filtro
     useEffect(() => {
-        const t = setTimeout(() => { handleBuscar(q); }, 400);
+        setPage(1);
+    }, [q, pertoDeMim, geo]);
+
+    // debounce: busca 400ms depois que parou de digitar / mudar filtro / mudar pagina
+    useEffect(() => {
+        const t = setTimeout(() => { handleBuscar(q, page); }, 400);
         return () => clearTimeout(t);
         /* eslint-disable-next-line */
-    }, [q]);
+    }, [q, pertoDeMim, geo, page]);
 
     async function openDetalhe(id: string) {
         setSelectedId(id);
@@ -244,18 +306,15 @@ export default function EquipesPage() {
                                 </div>
 
                                 <div className="x-field">
-                                    <label>Local (CEP ou descrição)</label>
+                                    <label>CEP</label>
                                     <input
                                         className="x-input"
-                                        placeholder="00000-000 ou 'Praia do Canto · quadra 3'"
+                                        placeholder="00000-000"
+                                        inputMode="numeric"
+                                        autoComplete="postal-code"
                                         value={maskCepOuLocal(create.cepOuLocal)}
                                         onChange={(e) => {
-                                            const v = e.target.value;
-                                            if (/^\d*$/.test(v)) {
-                                                setCreateField("cepOuLocal", v.replace(/\D/g, "").slice(0, 8));
-                                            } else {
-                                                setCreateField("cepOuLocal", v);
-                                            }
+                                            setCreateField("cepOuLocal", e.target.value.replace(/\D/g, "").slice(0, 8));
                                         }}
                                     />
                                 </div>
@@ -428,6 +487,27 @@ export default function EquipesPage() {
                             )}
                         </div>
 
+                        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
+                            <button
+                                type="button"
+                                className={`x-btn sm ${pertoDeMim ? "" : "ghost"}`}
+                                onClick={pertoDeMim ? desativarPertoDeMim : ativarPertoDeMim}
+                                disabled={locating}
+                                title={pertoDeMim ? "Desativar filtro" : "Filtrar equipes próximas"}
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: "-2px" }}>
+                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z" />
+                                    <circle cx="12" cy="10" r="3" />
+                                </svg>
+                                {locating ? "Localizando..." : (pertoDeMim ? "Perto de mim ✓" : "Perto de mim")}
+                            </button>
+                            {pertoDeMim && geo && (
+                                <span className="x-meta" style={{ fontSize: 12 }}>
+                                    Ordenando por proximidade
+                                </span>
+                            )}
+                        </div>
+
                         {results.length === 0 ? (
                             <div className="x-empty">
                                 <div className="x-empty-icon">
@@ -475,6 +555,32 @@ export default function EquipesPage() {
                                         </div>
                                     </button>
                                 ))}
+                            </div>
+                        )}
+
+                        {results.length > 0 && totalPages > 1 && (
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
+                                <span className="x-meta" style={{ fontSize: 12 }}>
+                                    Página {page} de {totalPages}{total ? ` · ${total} resultado${total === 1 ? "" : "s"}` : ""}
+                                </span>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <button
+                                        type="button"
+                                        className="x-btn ghost sm"
+                                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                                        disabled={searching || page <= 1}
+                                    >
+                                        ← Anterior
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="x-btn ghost sm"
+                                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                                        disabled={searching || page >= totalPages}
+                                    >
+                                        Próxima →
+                                    </button>
+                                </div>
                             </div>
                         )}
 

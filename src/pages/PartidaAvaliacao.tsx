@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../services/api";
-import { getPartida, enviarAvaliacoesJogadores } from "../services/partidas";
+import { getPartida, enviarAvaliacoesJogadores, getAvaliacoesPartida } from "../services/partidas";
 import AppHeader from "../components/AppHeader";
+import UserAvatar from "../components/UserAvatar";
+import UserDetalheModal from "../components/UserDetalheModal";
 import StarRating from "../components/StarRating";
 import { toast } from "../components/Toast";
 import { explainError, isAuthError } from "../utils/errors";
 
-type Presenca = { usuarioId: number; nome: string; statusPresenca: "CONFIRMADO" | "CANCELADO" | string; };
-type TimeJogador = { usuarioId: number; nome: string; nota: number; };
+type Presenca = { usuarioId: number; nome: string; statusPresenca: "CONFIRMADO" | "CANCELADO" | string; fotoPerfil?: string | null; };
+type TimeJogador = { usuarioId: number; nome: string; nota: number; fotoPerfil?: string | null; };
 type TimeGerado = { numero: number; jogadores: TimeJogador[]; };
 type TimesGerados = { id: number; partidaId: number; times: TimeGerado[]; reservas: TimeJogador[]; geradoEm: string; };
 type PartidaDetalhe = {
@@ -42,6 +44,7 @@ type JogadorAvaliavel = {
     usuarioId: number;
     nome: string;
     timeNumero: number | null; // null = reserva
+    fotoPerfil?: string | null;
 };
 
 export default function PartidaAvaliacaoPage() {
@@ -57,6 +60,7 @@ export default function PartidaAvaliacaoPage() {
     const [notasPorUsuario, setNotasPorUsuario] = useState<Record<number, number>>({});
     const [sending, setSending] = useState(false);
     const [currentIdx, setCurrentIdx] = useState(0);
+    const [userDetalhe, setUserDetalhe] = useState<{ usuarioId: number; nome: string; fotoPerfil?: string | null } | null>(null);
 
     async function loadPartida() {
         if (!partidaId) { setGateErr("ID de partida ausente."); return; }
@@ -85,7 +89,20 @@ export default function PartidaAvaliacaoPage() {
             }
             if (uid) {
                 const key = sentKey(partidaId, uid);
-                setJaEnviouAvaliacao(localStorage.getItem(key) === "1");
+                let enviou = localStorage.getItem(key) === "1";
+                // checa server-side: se ja existir avaliacao minha pra essa partida, trava
+                if (!enviou) {
+                    try {
+                        const res = await getAvaliacoesPartida(partidaId);
+                        const lista = (res?.avaliacoes ?? []) as Array<any>;
+                        const minha = lista.some((a) => Number(a?.avaliadorUsuarioId ?? a?.usuarioAvaliadorId ?? a?.usuarioId) === uid);
+                        if (minha) {
+                            enviou = true;
+                            localStorage.setItem(key, "1");
+                        }
+                    } catch { /* endpoint pode nao existir; ignora */ }
+                }
+                setJaEnviouAvaliacao(enviou);
             } else { setJaEnviouAvaliacao(false); }
             setGateErr(g);
         } catch (e: any) {
@@ -104,11 +121,11 @@ export default function PartidaAvaliacaoPage() {
         const list: JogadorAvaliavel[] = [];
         (data.timesGerados.times ?? []).forEach((t) => {
             (t.jogadores ?? []).forEach((j) => {
-                list.push({ usuarioId: j.usuarioId, nome: j.nome, timeNumero: t.numero });
+                list.push({ usuarioId: j.usuarioId, nome: j.nome, timeNumero: t.numero, fotoPerfil: j.fotoPerfil });
             });
         });
         (data.timesGerados.reservas ?? []).forEach((r) => {
-            list.push({ usuarioId: r.usuarioId, nome: r.nome, timeNumero: null });
+            list.push({ usuarioId: r.usuarioId, nome: r.nome, timeNumero: null, fotoPerfil: r.fotoPerfil });
         });
         return list.filter((j) => j.usuarioId !== meuId);
     }, [data?.timesGerados, meuId]);
@@ -252,89 +269,80 @@ export default function PartidaAvaliacaoPage() {
                     )}
 
                     {jogadores.length > 0 && (
-                        <div className="x-wizard x-reveal">
-                            {/* Stepper */}
-                            <div className="x-wizard-head">
-                                <div className="x-wizard-step-label">
-                                    Jogador <strong>{currentIdx + 1}</strong> de <strong>{jogadores.length}</strong>
-                                </div>
-                                <div className="x-wizard-dots">
-                                    {jogadores.map((j, i) => {
-                                        const has = typeof notasPorUsuario[j.usuarioId] === "number";
-                                        const cur = i === currentIdx;
-                                        return (
-                                            <button
-                                                key={j.usuarioId}
-                                                type="button"
-                                                className={`x-wizard-dot ${cur ? "cur" : ""} ${has ? "has" : ""}`}
-                                                onClick={() => setCurrentIdx(i)}
-                                                aria-label={`Ir para ${j.nome}`}
-                                            />
-                                        );
-                                    })}
-                                </div>
+                        <div className="x-reveal">
+                            <div className="x-card-title" style={{ marginBottom: 10 }}>
+                                Avaliados
+                                <span className="x-pill">
+                                    {jogadores.length - faltando.length}/{jogadores.length}
+                                </span>
                             </div>
-
-                            <div className="x-progress" aria-hidden>
+                            <div className="x-progress" aria-hidden style={{ marginBottom: 18 }}>
                                 <div className="x-progress-fill" style={{ width: `${progress}%` }} />
                             </div>
 
-                            {currentJogador && (
-                                <div className="x-wizard-card">
-                                    <div className="x-wizard-team">
-                                        <div className="x-avatar lg">
-                                            {String(currentJogador.nome || "?").trim().charAt(0).toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <h3 className="x-wizard-team-name">{currentJogador.nome}</h3>
-                                            <div className="x-wizard-team-sub">
-                                                {currentJogador.timeNumero != null
-                                                    ? `Time ${currentJogador.timeNumero}`
-                                                    : "Reserva"}
+                            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                {jogadores.map((j) => {
+                                    const nota = notasPorUsuario[j.usuarioId] ?? 0;
+                                    return (
+                                        <div key={j.usuarioId} className="x-card" style={{ padding: 14 }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                                                <UserAvatar nome={j.nome} fotoPerfil={j.fotoPerfil} size="md" />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontWeight: 700, fontSize: 15 }}>{j.nome}</div>
+                                                    <div className="x-meta" style={{ fontSize: 12 }}>
+                                                        {j.timeNumero != null ? `Time ${j.timeNumero}` : "Reserva"}
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="x-btn ghost sm"
+                                                    onClick={() => setUserDetalhe({ usuarioId: j.usuarioId, nome: j.nome, fotoPerfil: j.fotoPerfil })}
+                                                    title="Ver detalhes"
+                                                >
+                                                    Detalhes
+                                                </button>
+                                            </div>
+                                            <div style={{ display: "flex", justifyContent: "center" }}>
+                                                <StarRating
+                                                    value={nota}
+                                                    onChange={(v) => setNotaJogador(j.usuarioId, v)}
+                                                    disabled={!podeInteragir}
+                                                    size={36}
+                                                />
                                             </div>
                                         </div>
-                                    </div>
+                                    );
+                                })}
+                            </div>
 
-                                    <div className="x-wizard-rating">
-                                        <div className="x-wizard-rating-label">Como foi a atuação deste jogador?</div>
-                                        <StarRating
-                                            value={notaLocal}
-                                            onChange={(v) => setNotaJogador(currentJogador.usuarioId, v)}
-                                            disabled={!podeInteragir}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="x-wizard-nav">
+                            <div style={{ display: "flex", justifyContent: "center", marginTop: 22 }}>
                                 <button
-                                    className="x-btn ghost"
-                                    onClick={goPrev}
-                                    disabled={isFirst}
+                                    className="x-btn lg"
+                                    onClick={onEnviar}
+                                    disabled={!podeInteragir || sending || !allRated}
+                                    title={!allRated ? `Faltam ${faltando.length} jogador(es)` : undefined}
                                 >
-                                    ← Anterior
-                                </button>
-                                <button
-                                    className="x-btn"
-                                    onClick={goNextOrSend}
-                                    disabled={!podeInteragir || sending || (isLast && !currentRated)}
-                                >
-                                    {sending
-                                        ? "Enviando..."
-                                        : isLast && allRated
-                                            ? "Enviar avaliação"
-                                            : "Próximo"}
+                                    {sending ? "Enviando..." : allRated ? "Enviar avaliação" : `Faltam ${faltando.length}`}
                                     <span className="x-btn-arr">→</span>
                                 </button>
                             </div>
 
-                            <p className="x-wizard-fine">
-                                Suas notas ficam registradas e o site bloqueia nova edição neste dispositivo.
+                            <p className="x-wizard-fine" style={{ marginTop: 14 }}>
+                                Após enviar, suas notas ficam registradas e não podem ser editadas.
                             </p>
                         </div>
                     )}
                 </div>
             </main>
+
+            {userDetalhe && (
+                <UserDetalheModal
+                    usuarioId={userDetalhe.usuarioId}
+                    nome={userDetalhe.nome}
+                    fotoPerfil={userDetalhe.fotoPerfil}
+                    onClose={() => setUserDetalhe(null)}
+                />
+            )}
         </div>
     );
 }

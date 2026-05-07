@@ -2303,12 +2303,18 @@ body {
     display: flex;
     gap: 8px;
     flex-shrink: 0;
+    flex-wrap: wrap;
+}
+.x-next-step-actions .x-btn {
+    white-space: normal;
+    text-align: center;
+    min-width: 0;
 }
 
 @media (max-width: 640px) {
     .x-next-step { grid-template-columns: 1fr; padding: 18px 20px; }
     .x-next-step-actions { width: 100%; }
-    .x-next-step-actions .x-btn { flex: 1; }
+    .x-next-step-actions .x-btn { flex: 1 1 140px; }
 }
 
 /* ── Search bar (busca com debounce + clear + spinner) ──────── */

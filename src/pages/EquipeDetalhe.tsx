@@ -10,6 +10,7 @@ import { getEstatisticasUsuario } from "../services/estatisticas";
 import type { Estatisticas } from "../services/estatisticas";
 import AppHeader from "../components/AppHeader";
 import CountUp from "../components/CountUp";
+import UserAvatar from "../components/UserAvatar";
 import { toast } from "../components/Toast";
 import { explainError, isAuthError, isNotImplemented } from "../utils/errors";
 
@@ -18,6 +19,76 @@ function fmtISOToBR(iso?: string) {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return null;
     return d.toLocaleString("pt-BR");
+}
+const DIA_ABREV: Record<string, string> = {
+    segunda: "Seg", terca: "Ter", quarta: "Qua", quinta: "Qui",
+    sexta: "Sex", sabado: "Sáb", domingo: "Dom",
+};
+function fmtDiasHorarios(s?: string | null) {
+    if (!s) return null;
+    const parts = s.split(",").map((p) => p.trim()).filter(Boolean);
+    if (!parts.length) return null;
+    return parts.map((p) => {
+        const [dia, hora] = p.split("-");
+        return `${DIA_ABREV[dia?.toLowerCase()] ?? dia} ${hora ?? ""}`.trim();
+    }).join(", ");
+}
+function fmtCEP(s?: string | null) {
+    if (!s) return "";
+    const digits = s.replace(/\D/g, "");
+    if (digits.length === 8) return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+    return s;
+}
+type DiaKey = "segunda" | "terca" | "quarta" | "quinta" | "sexta" | "sabado" | "domingo";
+const DIAS_AGENDA: { key: DiaKey; label: string }[] = [
+    { key: "segunda", label: "segunda" },
+    { key: "terca", label: "terça" },
+    { key: "quarta", label: "quarta" },
+    { key: "quinta", label: "quinta" },
+    { key: "sexta", label: "sexta" },
+    { key: "sabado", label: "sábado" },
+    { key: "domingo", label: "domingo" },
+];
+type AgendaState = Record<DiaKey, { enabled: boolean; time: string }>;
+const AGENDA_VAZIA: AgendaState = {
+    segunda: { enabled: false, time: "19:00" },
+    terca: { enabled: false, time: "19:00" },
+    quarta: { enabled: false, time: "19:00" },
+    quinta: { enabled: false, time: "19:00" },
+    sexta: { enabled: false, time: "19:00" },
+    sabado: { enabled: false, time: "09:00" },
+    domingo: { enabled: false, time: "09:00" },
+};
+function parseAgenda(s?: string | null): AgendaState {
+    const next: AgendaState = JSON.parse(JSON.stringify(AGENDA_VAZIA));
+    if (!s) return next;
+    s.split(",").map((p) => p.trim()).filter(Boolean).forEach((p) => {
+        const [diaRaw, horaRaw] = p.split("-");
+        const dia = (diaRaw ?? "").toLowerCase() as DiaKey;
+        if (!(dia in next)) return;
+        next[dia].enabled = true;
+        if (horaRaw && /^\d{1,2}:\d{2}$/.test(horaRaw.trim())) {
+            next[dia].time = horaRaw.trim();
+        }
+    });
+    return next;
+}
+function agendaToStr(a: AgendaState): string {
+    return DIAS_AGENDA
+        .filter((d) => a[d.key].enabled)
+        .map((d) => `${d.key}-${a[d.key].time}`)
+        .join(",");
+}
+
+function LockIcon({ open, size = 22 }: { open: boolean; size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            {open
+                ? <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                : <path d="M7 11V7a5 5 0 0 1 10 0v4" />}
+        </svg>
+    );
 }
 function isAdminRole(papel?: string) {
     return papel === "ADMIN" || papel === "ADMINISTRADOR";
@@ -69,6 +140,7 @@ export default function EquipeDetalhePage() {
         nome: "", cepOuLocal: "", esporte: "VOLEI" as Esporte,
         statusEquipe: "ABERTA" as StatusEquipe, diasHorariosPadrao: "",
     });
+    const [editAgenda, setEditAgenda] = useState<AgendaState>(AGENDA_VAZIA);
     const [salvandoEdit, setSalvandoEdit] = useState(false);
 
     // confirmação de excluir equipe
@@ -84,20 +156,23 @@ export default function EquipeDetalhePage() {
             statusEquipe: data.statusEquipe,
             diasHorariosPadrao: data.diasHorariosPadrao ?? "",
         });
+        setEditAgenda(parseAgenda(data.diasHorariosPadrao));
         setShowEditar(true);
     }
 
     async function handleSalvarEdicao() {
         if (!equipeId) return;
+        const agendaStr = agendaToStr(editAgenda);
         const body = {
             nome: editForm.nome.trim(),
-            cepOuLocal: editForm.cepOuLocal.trim(),
+            cepOuLocal: editForm.cepOuLocal.trim().replace(/\D/g, "").slice(0, 8) || editForm.cepOuLocal.trim(),
             esporte: editForm.esporte,
             statusEquipe: editForm.statusEquipe,
-            diasHorariosPadrao: editForm.diasHorariosPadrao.trim(),
+            diasHorariosPadrao: agendaStr,
         };
         if (!body.nome) { toast.warn("Nome é obrigatório."); return; }
-        if (!body.cepOuLocal) { toast.warn("Local é obrigatório."); return; }
+        if (!body.cepOuLocal) { toast.warn("CEP é obrigatório."); return; }
+        if (!agendaStr) { toast.warn("Habilite ao menos um dia na agenda."); return; }
         try {
             setSalvandoEdit(true);
             await atualizarEquipe(equipeId, body);
@@ -144,12 +219,12 @@ export default function EquipeDetalhePage() {
     const [confirm, setConfirm] = useState<ConfirmState>(null);
 
     // modal "ver mais" do membro (detalhes + estatísticas)
-    const [detalheMembro, setDetalheMembro] = useState<{ usuarioId: number; nome: string; papel?: string; ativo?: boolean } | null>(null);
+    const [detalheMembro, setDetalheMembro] = useState<{ usuarioId: number; nome: string; papel?: string; ativo?: boolean; fotoPerfil?: string | null } | null>(null);
     const [detalheStats, setDetalheStats] = useState<Estatisticas | null>(null);
     const [detalheLoading, setDetalheLoading] = useState(false);
     const [detalheErr, setDetalheErr] = useState<string | null>(null);
 
-    async function abrirDetalheMembro(m: { usuarioId: number; nome: string; papel?: string; ativo?: boolean }) {
+    async function abrirDetalheMembro(m: { usuarioId: number; nome: string; papel?: string; ativo?: boolean; fotoPerfil?: string | null }) {
         setDetalheMembro(m);
         setDetalheStats(null);
         setDetalheErr(null);
@@ -379,11 +454,47 @@ export default function EquipeDetalhePage() {
                     <button className="x-phero-back" onClick={() => nav(-1)}>← Voltar</button>
                     <div className="x-phero-grid">
                         <div>
-                            <h1 className="x-phero-title">{data.nome}</h1>
-                            <div className="x-meta" style={{ marginBottom: 18 }}>{data.cepOuLocal}</div>
-                            <div className="x-phero-meta">
-                                <span className="x-pill">{data.esporte}</span>
-                                <span className="x-pill">{data.statusEquipe}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                                <h1 className="x-phero-title" style={{ margin: 0 }}>{data.nome}</h1>
+                                {typeof data.notaEquipe === "number" && (
+                                    <span style={{
+                                        color: "var(--x-accent)",
+                                        fontWeight: 800,
+                                        fontSize: "1.6rem",
+                                        lineHeight: 1,
+                                        whiteSpace: "nowrap",
+                                    }}>
+                                        ★ {Number(data.notaEquipe).toFixed(1)}
+                                    </span>
+                                )}
+                                <span
+                                    style={{
+                                        display: "inline-flex",
+                                        flexDirection: "column",
+                                        alignItems: "center",
+                                        gap: 2,
+                                        color: data.statusEquipe === "ABERTA" ? "var(--x-accent)" : "#ff8a8a",
+                                    }}
+                                    title={data.statusEquipe === "ABERTA" ? "Equipe aberta" : "Equipe fechada"}
+                                >
+                                    <LockIcon open={data.statusEquipe === "ABERTA"} />
+                                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase" }}>
+                                        {data.statusEquipe === "ABERTA" ? "Aberta" : "Fechada"}
+                                    </span>
+                                </span>
+                            </div>
+
+                            <div className="x-phero-info" style={{ marginTop: 14, display: "grid", gap: 6, color: "var(--x-meta, #aab)" }}>
+                                <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+                                    <span><strong style={{ color: "#fff", marginRight: 6 }}>CEP</strong>{fmtCEP(data.cepOuLocal) || "—"}</span>
+                                </div>
+                                <div><strong style={{ color: "#fff", marginRight: 6 }}>Esporte</strong>{data.esporte}</div>
+                                <div><strong style={{ color: "#fff", marginRight: 6 }}>Criada em</strong>{criadoEm ?? "—"}</div>
+                                <div><strong style={{ color: "#fff", marginRight: 6 }}>Dias de jogo</strong>{fmtDiasHorarios(data.diasHorariosPadrao) ?? "—"}</div>
+                                <div><strong style={{ color: "#fff", marginRight: 6 }}>Jogos</strong>{totalJogos == null ? "—" : totalJogos}</div>
+                            </div>
+
+                            <div className="x-phero-meta" style={{ marginTop: 14 }}>
                                 {souAdmin && <span className="x-pill accent">Você é admin</span>}
                                 {!souAdmin && souMembro && <span className="x-pill success">Membro</span>}
                             </div>
@@ -437,58 +548,6 @@ export default function EquipeDetalhePage() {
                             <span className="x-stat-mini-val">
                                 {totalJogos == null ? "—" : <CountUp to={totalJogos} />}
                             </span>
-                        </div>
-                        {typeof data.notaEquipe === "number" && (
-                            <div className="x-stat-mini">
-                                <span className="x-stat-mini-lbl">Nota equipe</span>
-                                <span className="x-stat-mini-val" style={{ color: "var(--x-accent)" }}>
-                                    ★ {Number(data.notaEquipe).toFixed(1)}
-                                </span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Info detalhada */}
-                    <div className="x-card" style={{ marginBottom: 24 }}>
-                        <div className="x-card-title">Informações</div>
-                        <hr className="x-divider" />
-                        <div className="x-info-grid">
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">Nome</span>
-                                <span className="x-info-val">{data.nome}</span>
-                            </div>
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">CEP / Local</span>
-                                <span className="x-info-val">{data.cepOuLocal || "—"}</span>
-                            </div>
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">Esporte</span>
-                                <span className="x-info-val">{data.esporte}</span>
-                            </div>
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">Status</span>
-                                <span className="x-info-val">{data.statusEquipe}</span>
-                            </div>
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">Agenda padrão</span>
-                                <span className="x-info-val">{data.diasHorariosPadrao || "—"}</span>
-                            </div>
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">Criada em</span>
-                                <span className="x-info-val">{criadoEm ?? "—"}</span>
-                            </div>
-                            <div className="x-info-item">
-                                <span className="x-info-lbl">Jogos</span>
-                                <span className="x-info-val">{totalJogos == null ? "—" : totalJogos}</span>
-                            </div>
-                            {typeof data.notaEquipe === "number" && (
-                                <div className="x-info-item">
-                                    <span className="x-info-lbl">Nota da equipe</span>
-                                    <span className="x-info-val" style={{ color: "var(--x-accent)" }}>
-                                        ★ {Number(data.notaEquipe).toFixed(1)}
-                                    </span>
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -587,9 +646,12 @@ export default function EquipeDetalhePage() {
                                         className={`x-row ${m.ativo ? "" : "dim"}`}
                                         style={medal >= 0 ? { borderLeft: `3px solid ${medalColor}` } : undefined}
                                     >
-                                        <div className="x-avatar sm" style={medal >= 0 ? { boxShadow: `0 0 0 2px ${medalColor}` } : undefined}>
-                                            {String(m.nome || "?").trim().charAt(0).toUpperCase()}
-                                        </div>
+                                        <UserAvatar
+                                            nome={m.nome}
+                                            fotoPerfil={m.fotoPerfil}
+                                            size="sm"
+                                            style={medal >= 0 ? { boxShadow: `0 0 0 2px ${medalColor}` } : undefined}
+                                        />
                                         <div className="x-row-main">
                                             <div className="x-row-name" style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                                                 {medal >= 0 && (
@@ -629,6 +691,7 @@ export default function EquipeDetalhePage() {
                                                     nome: m.nome,
                                                     papel: m.papel,
                                                     ativo: m.ativo,
+                                                    fotoPerfil: m.fotoPerfil,
                                                 })}
                                                 title="Ver detalhes e estatísticas"
                                             >
@@ -679,11 +742,22 @@ export default function EquipeDetalhePage() {
                                 />
                             </div>
                             <div className="x-field">
-                                <label>Local</label>
+                                <label>CEP</label>
                                 <input
                                     className="x-input"
-                                    value={editForm.cepOuLocal}
-                                    onChange={(e) => setEditForm((p) => ({ ...p, cepOuLocal: e.target.value }))}
+                                    placeholder="00000-000"
+                                    inputMode="numeric"
+                                    autoComplete="postal-code"
+                                    value={(() => {
+                                        const v = editForm.cepOuLocal ?? "";
+                                        const nums = v.replace(/\D/g, "");
+                                        if (/^\d+-?\d*$/.test(v) || nums.length > 0 && nums === v.replace(/-/g, "")) {
+                                            const n = nums.slice(0, 8);
+                                            return n.length <= 5 ? n : `${n.slice(0, 5)}-${n.slice(5)}`;
+                                        }
+                                        return v;
+                                    })()}
+                                    onChange={(e) => setEditForm((p) => ({ ...p, cepOuLocal: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
                                 />
                             </div>
                             <div className="x-form-grid">
@@ -710,14 +784,40 @@ export default function EquipeDetalhePage() {
                                     </select>
                                 </div>
                             </div>
-                            <div className="x-field">
-                                <label>Agenda padrão</label>
-                                <input
-                                    className="x-input"
-                                    placeholder="ex: sabado-09:00,quarta-19:00"
-                                    value={editForm.diasHorariosPadrao}
-                                    onChange={(e) => setEditForm((p) => ({ ...p, diasHorariosPadrao: e.target.value }))}
-                                />
+                            <div>
+                                <label className="x-label" style={{ display: "block", marginBottom: 10 }}>
+                                    Agenda padrão
+                                </label>
+                                <div className="x-agenda">
+                                    {DIAS_AGENDA.map((d) => {
+                                        const item = editAgenda[d.key];
+                                        return (
+                                            <div key={d.key} className={`x-agenda-row ${item.enabled ? "on" : ""}`}>
+                                                <label className="x-agenda-day">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={item.enabled}
+                                                        onChange={(e) => {
+                                                            const enabled = e.target.checked;
+                                                            setEditAgenda((prev) => ({ ...prev, [d.key]: { ...prev[d.key], enabled } }));
+                                                        }}
+                                                    />
+                                                    <span>{d.label}</span>
+                                                </label>
+                                                <input
+                                                    type="time"
+                                                    className="x-agenda-time"
+                                                    value={item.time}
+                                                    disabled={!item.enabled}
+                                                    onChange={(e) => {
+                                                        const time = e.target.value;
+                                                        setEditAgenda((prev) => ({ ...prev, [d.key]: { ...prev[d.key], time } }));
+                                                    }}
+                                                />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
 
@@ -841,9 +941,11 @@ export default function EquipeDetalhePage() {
                     <div className="x-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="x-eyebrow">Jogador</div>
                         <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12, marginBottom: 8 }}>
-                            <div className="x-avatar">
-                                {String(detalheMembro.nome || "?").trim().charAt(0).toUpperCase()}
-                            </div>
+                            <UserAvatar
+                                nome={detalheMembro.nome}
+                                fotoPerfil={detalheMembro.fotoPerfil}
+                                size="md"
+                            />
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <h3 className="x-modal-title" style={{ margin: 0 }}>{detalheMembro.nome}</h3>
                                 <div className="x-row-meta" style={{ marginTop: 6 }}>
@@ -924,9 +1026,7 @@ export default function EquipeDetalhePage() {
                                             <div className="x-list">
                                                 {detalheStats.parceirosFrequentes.slice(0, 3).map((pp) => (
                                                     <div key={pp.usuarioId} className="x-row">
-                                                        <div className="x-avatar sm">
-                                                            {String(pp.nome || "?").trim().charAt(0).toUpperCase()}
-                                                        </div>
+                                                        <UserAvatar nome={pp.nome} fotoPerfil={pp.fotoPerfil} size="sm" />
                                                         <div className="x-row-main">
                                                             <div className="x-row-name">{pp.nome}</div>
                                                             <div className="x-row-meta">

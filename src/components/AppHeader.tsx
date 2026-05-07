@@ -15,7 +15,6 @@ export default function AppHeader({ onLogout }: Props) {
 
     const isEquipes = path === "/equipes" || path.startsWith("/equipes");
     const isEu = path === "/eu";
-    const isConvites = path === "/convites";
     const isStats = path === "/estatisticas";
 
     const [pendentes, setPendentes] = useState<number>(0);
@@ -61,13 +60,6 @@ export default function AppHeader({ onLogout }: Props) {
                         onClick={() => nav("/equipes")}
                     >
                         Equipes
-                    </button>
-                    <button
-                        className={`x-app-nav-link ${isConvites ? "active" : ""}`}
-                        onClick={() => nav("/convites")}
-                    >
-                        Convites
-                        {pendentes > 0 && <span className="x-nav-badge">{pendentes}</span>}
                     </button>
                     <button
                         className={`x-app-nav-link ${isStats ? "active" : ""}`}

@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { isLoggedIn } from "../utils/auth";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import TiltCard from "../components/TiltCard";
@@ -69,6 +71,12 @@ const ATHLETES = [
 
 export default function Home() {
     const nav = useNavigate();
+
+    useEffect(() => {
+        if (isLoggedIn()) nav("/equipes", { replace: true });
+    }, [nav]);
+
+    if (isLoggedIn()) return null;
 
     return (
         <main className="x">

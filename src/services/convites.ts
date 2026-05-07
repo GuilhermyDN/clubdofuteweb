@@ -9,7 +9,10 @@ export type Convite = {
     telefoneDestino?: string;
     remetenteUsuarioId?: number;
     remetenteNome?: string;
+    remetenteFotoPerfil?: string | null;
     destinatarioUsuarioId?: number;
+    destinatarioNome?: string;
+    destinatarioFotoPerfil?: string | null;
     status: StatusConvite;
     criadoEm?: string;
 };
