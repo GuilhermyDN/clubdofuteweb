@@ -6,7 +6,9 @@ export type StatusEquipe = "ABERTA" | "FECHADA";
 export type EquipeResumo = {
   id: string;
   nome: string;
-  cepOuLocal: string;
+  cep: string;
+  rua?: string | null;
+  numero?: string | null;
   esporte: Esporte;
   statusEquipe: StatusEquipe;
   diasHorariosPadrao?: string | null;
@@ -34,7 +36,8 @@ export type EquipeDetalhe = EquipeResumo & {
 
 export type CriarEquipeBody = {
   nome: string;
-  cepOuLocal: string;
+  cep: string;
+  numero: string;
   esporte: Esporte;
   statusEquipe: StatusEquipe;
   senhaEquipe?: string; // obrigatório se FECHADA
@@ -115,7 +118,8 @@ export async function listarMinhasEquipes(): Promise<EquipeResumo[]> {
 
 export type AtualizarEquipeBody = Partial<{
   nome: string;
-  cepOuLocal: string;
+  cep: string;
+  numero: string;
   esporte: Esporte;
   statusEquipe: StatusEquipe;
   diasHorariosPadrao: string;

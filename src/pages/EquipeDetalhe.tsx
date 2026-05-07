@@ -137,7 +137,7 @@ export default function EquipeDetalhePage() {
     // modal editar equipe (admin)
     const [showEditar, setShowEditar] = useState(false);
     const [editForm, setEditForm] = useState({
-        nome: "", cepOuLocal: "", esporte: "VOLEI" as Esporte,
+        nome: "", cep: "", numero: "", esporte: "VOLEI" as Esporte,
         statusEquipe: "ABERTA" as StatusEquipe, diasHorariosPadrao: "",
     });
     const [editAgenda, setEditAgenda] = useState<AgendaState>(AGENDA_VAZIA);
@@ -151,7 +151,8 @@ export default function EquipeDetalhePage() {
         if (!data) return;
         setEditForm({
             nome: data.nome,
-            cepOuLocal: data.cepOuLocal,
+            cep: data.cep ?? "",
+            numero: (data.numero as any) ?? "",
             esporte: data.esporte,
             statusEquipe: data.statusEquipe,
             diasHorariosPadrao: data.diasHorariosPadrao ?? "",
@@ -165,13 +166,16 @@ export default function EquipeDetalhePage() {
         const agendaStr = agendaToStr(editAgenda);
         const body = {
             nome: editForm.nome.trim(),
-            cepOuLocal: editForm.cepOuLocal.trim().replace(/\D/g, "").slice(0, 8) || editForm.cepOuLocal.trim(),
+            cep: editForm.cep.trim().replace(/\D/g, "").slice(0, 8),
+            numero: editForm.numero.trim(),
             esporte: editForm.esporte,
             statusEquipe: editForm.statusEquipe,
             diasHorariosPadrao: agendaStr,
         };
         if (!body.nome) { toast.warn("Nome é obrigatório."); return; }
-        if (!body.cepOuLocal) { toast.warn("CEP é obrigatório."); return; }
+        if (!body.cep) { toast.warn("CEP é obrigatório."); return; }
+        if (!/^\d{8}$/.test(body.cep)) { toast.warn("CEP deve ter 8 dígitos."); return; }
+        if (!body.numero) { toast.warn("Número é obrigatório."); return; }
         if (!agendaStr) { toast.warn("Habilite ao menos um dia na agenda."); return; }
         try {
             setSalvandoEdit(true);
@@ -481,7 +485,11 @@ export default function EquipeDetalhePage() {
                                 <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
                                     <span>{data.esporte}</span>
                                     <span>·</span>
-                                    <span>{fmtCEP(data.cepOuLocal) || "—"}</span>
+                                    <span>
+                                        {(data as any).rua
+                                            ? `${(data as any).rua}${data.numero ? ", " + data.numero : ""}`
+                                            : fmtCEP(data.cep) || "—"}
+                                    </span>
                                     <span>·</span>
                                     <span>{totalJogos == null ? "—" : `${totalJogos} jogo${totalJogos === 1 ? "" : "s"}`}</span>
                                 </div>
@@ -737,24 +745,31 @@ export default function EquipeDetalhePage() {
                                     onChange={(e) => setEditForm((p) => ({ ...p, nome: e.target.value }))}
                                 />
                             </div>
-                            <div className="x-field">
-                                <label>CEP</label>
-                                <input
-                                    className="x-input"
-                                    placeholder="00000-000"
-                                    inputMode="numeric"
-                                    autoComplete="postal-code"
-                                    value={(() => {
-                                        const v = editForm.cepOuLocal ?? "";
-                                        const nums = v.replace(/\D/g, "");
-                                        if (/^\d+-?\d*$/.test(v) || nums.length > 0 && nums === v.replace(/-/g, "")) {
-                                            const n = nums.slice(0, 8);
+                            <div className="x-form-grid">
+                                <div className="x-field">
+                                    <label>CEP</label>
+                                    <input
+                                        className="x-input"
+                                        placeholder="00000-000"
+                                        inputMode="numeric"
+                                        autoComplete="postal-code"
+                                        value={(() => {
+                                            const n = (editForm.cep ?? "").replace(/\D/g, "").slice(0, 8);
                                             return n.length <= 5 ? n : `${n.slice(0, 5)}-${n.slice(5)}`;
-                                        }
-                                        return v;
-                                    })()}
-                                    onChange={(e) => setEditForm((p) => ({ ...p, cepOuLocal: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
-                                />
+                                        })()}
+                                        onChange={(e) => setEditForm((p) => ({ ...p, cep: e.target.value.replace(/\D/g, "").slice(0, 8) }))}
+                                    />
+                                </div>
+                                <div className="x-field">
+                                    <label>Número</label>
+                                    <input
+                                        className="x-input"
+                                        placeholder="123"
+                                        inputMode="numeric"
+                                        value={editForm.numero}
+                                        onChange={(e) => setEditForm((p) => ({ ...p, numero: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+                                    />
+                                </div>
                             </div>
                             <div className="x-form-grid">
                                 <div className="x-field">
@@ -1020,7 +1035,7 @@ export default function EquipeDetalhePage() {
                                         <>
                                             <div className="x-eyebrow" style={{ marginBottom: 8 }}>Parceiros frequentes</div>
                                             <div className="x-list">
-                                                {detalheStats.parceirosFrequentes.slice(0, 3).map((pp) => (
+                                                {detalheStats.parceirosFrequentes.map((pp) => (
                                                     <div key={pp.usuarioId} className="x-row">
                                                         <UserAvatar nome={pp.nome} fotoPerfil={pp.fotoPerfil} size="sm" />
                                                         <div className="x-row-main">
@@ -1030,6 +1045,22 @@ export default function EquipeDetalhePage() {
                                                                     {pp.totalPartidasJuntos} partida{pp.totalPartidasJuntos !== 1 ? "s" : ""}
                                                                 </span>
                                                             </div>
+                                                        </div>
+                                                        <div className="x-row-actions">
+                                                            <button
+                                                                className="x-btn ghost sm"
+                                                                onClick={() => abrirDetalheMembro({
+                                                                    usuarioId: pp.usuarioId,
+                                                                    nome: pp.nome,
+                                                                    fotoPerfil: pp.fotoPerfil,
+                                                                })}
+                                                                title="Ver detalhes do jogador"
+                                                            >
+                                                                Ver mais
+                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 4 }}>
+                                                                    <polyline points="9 18 15 12 9 6" />
+                                                                </svg>
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 ))}

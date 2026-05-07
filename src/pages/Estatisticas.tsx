@@ -153,9 +153,12 @@ export default function EstatisticasPage() {
                                                     <button
                                                         className="x-btn ghost sm"
                                                         onClick={() => setUserDetalhe({ usuarioId: p.usuarioId, nome: p.nome, fotoPerfil: p.fotoPerfil })}
-                                                        title="Ver detalhes"
+                                                        title="Ver detalhes do jogador"
                                                     >
-                                                        Detalhes
+                                                        Ver mais
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 4 }}>
+                                                            <polyline points="9 18 15 12 9 6" />
+                                                        </svg>
                                                     </button>
                                                 </div>
                                             </div>

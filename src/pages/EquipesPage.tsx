@@ -9,6 +9,14 @@ import { toast } from "../components/Toast";
 import { explainError, isAuthError } from "../utils/errors";
 
 function normalizeStr(v: string) { return (v ?? "").trim(); }
+function fmtEndereco(r: { cep?: string | null; rua?: string | null; numero?: string | null }) {
+    const cep = (r.cep ?? "").trim();
+    const rua = (r.rua ?? "").trim();
+    const num = (r.numero ?? "").trim();
+    if (rua) return `${rua}${num ? ", " + num : ""}`;
+    if (cep) return cep.length === 8 ? `${cep.slice(0, 5)}-${cep.slice(5)}` : cep;
+    return "—";
+}
 function maskCepOuLocal(v: string) {
     const onlyNums = v.replace(/\D/g, "");
     if (/^\d*$/.test(v)) {
@@ -50,7 +58,7 @@ export default function EquipesPage() {
     useEffect(() => { loadMinhasEquipes(); /* eslint-disable-next-line */ }, []);
 
     const [create, setCreate] = useState<CriarEquipeBody>({
-        nome: "", cepOuLocal: "", esporte: "VOLEI", statusEquipe: "ABERTA", senhaEquipe: "", diasHorariosPadrao: "",
+        nome: "", cep: "", numero: "", esporte: "VOLEI", statusEquipe: "ABERTA", senhaEquipe: "", diasHorariosPadrao: "",
     });
 
     const [agenda, setAgenda] = useState<Record<DiaKey, { enabled: boolean; time: string }>>({
@@ -104,14 +112,16 @@ export default function EquipesPage() {
     async function handleCriarEquipe() {
         const payload: CriarEquipeBody = {
             nome: normalizeStr(create.nome),
-            cepOuLocal: normalizeStr(create.cepOuLocal),
+            cep: normalizeStr(create.cep).replace(/\D/g, ""),
+            numero: normalizeStr(create.numero),
             esporte: create.esporte,
             statusEquipe: create.statusEquipe,
             diasHorariosPadrao: diasHorariosPadraoStr,
         };
         if (!payload.nome) return toast.warn("Nome da equipe é obrigatório.");
-        if (!payload.cepOuLocal) return toast.warn("CEP é obrigatório.");
-        if (!/^\d{8}$/.test(payload.cepOuLocal)) return toast.warn("CEP deve ter 8 dígitos.");
+        if (!payload.cep) return toast.warn("CEP é obrigatório.");
+        if (!/^\d{8}$/.test(payload.cep)) return toast.warn("CEP deve ter 8 dígitos.");
+        if (!payload.numero) return toast.warn("Número é obrigatório.");
         if (!payload.diasHorariosPadrao) return toast.warn("Habilite ao menos um dia na agenda padrão.");
         if (payload.statusEquipe === "FECHADA") {
             const s = normalizeStr(create.senhaEquipe ?? "");
@@ -305,18 +315,30 @@ export default function EquipesPage() {
                                     />
                                 </div>
 
-                                <div className="x-field">
-                                    <label>CEP</label>
-                                    <input
-                                        className="x-input"
-                                        placeholder="00000-000"
-                                        inputMode="numeric"
-                                        autoComplete="postal-code"
-                                        value={maskCepOuLocal(create.cepOuLocal)}
-                                        onChange={(e) => {
-                                            setCreateField("cepOuLocal", e.target.value.replace(/\D/g, "").slice(0, 8));
-                                        }}
-                                    />
+                                <div className="x-form-grid">
+                                    <div className="x-field">
+                                        <label>CEP</label>
+                                        <input
+                                            className="x-input"
+                                            placeholder="00000-000"
+                                            inputMode="numeric"
+                                            autoComplete="postal-code"
+                                            value={maskCepOuLocal(create.cep)}
+                                            onChange={(e) => {
+                                                setCreateField("cep", e.target.value.replace(/\D/g, "").slice(0, 8));
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="x-field">
+                                        <label>Número</label>
+                                        <input
+                                            className="x-input"
+                                            placeholder="123"
+                                            inputMode="numeric"
+                                            value={create.numero}
+                                            onChange={(e) => setCreateField("numero", e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                        />
+                                    </div>
                                 </div>
 
                                 <div className="x-form-grid">
@@ -432,7 +454,7 @@ export default function EquipesPage() {
                                                 <span className="sep">·</span>
                                                 <span>{r.statusEquipe}</span>
                                                 <span className="sep">·</span>
-                                                <span>{r.cepOuLocal}</span>
+                                                <span>{fmtEndereco(r)}</span>
                                             </div>
                                         </div>
                                         <div className="x-list-item-right">
@@ -547,7 +569,7 @@ export default function EquipesPage() {
                                                 <span className="sep">·</span>
                                                 <span>{r.statusEquipe}</span>
                                                 <span className="sep">·</span>
-                                                <span>{r.cepOuLocal}</span>
+                                                <span>{fmtEndereco(r)}</span>
                                             </div>
                                         </div>
                                         <div className="x-list-item-right">
