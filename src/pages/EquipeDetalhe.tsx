@@ -443,7 +443,7 @@ export default function EquipeDetalhePage() {
 
     if (!data) return null;
 
-    const criadoEm = fmtISOToBR((data as any)?.criadoEm);
+    void fmtISOToBR; // (criadoEm não exibido no novo hero)
 
     return (
         <div className="x-app">
@@ -454,44 +454,40 @@ export default function EquipeDetalhePage() {
                     <button className="x-phero-back" onClick={() => nav(-1)}>← Voltar</button>
                     <div className="x-phero-grid">
                         <div>
-                            <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
-                                <h1 className="x-phero-title" style={{ margin: 0 }}>{data.nome}</h1>
-                                {typeof data.notaEquipe === "number" && (
-                                    <span style={{
-                                        color: "var(--x-accent)",
-                                        fontWeight: 800,
-                                        fontSize: "1.6rem",
-                                        lineHeight: 1,
-                                        whiteSpace: "nowrap",
-                                    }}>
-                                        ★ {Number(data.notaEquipe).toFixed(1)}
-                                    </span>
-                                )}
+                            {/* Linha principal: NOME + NOTA + cadeado */}
+                            <div className="x-team-headline">
+                                <h1 className="x-phero-title x-team-name">{data.nome}</h1>
                                 <span
-                                    style={{
-                                        display: "inline-flex",
-                                        flexDirection: "column",
-                                        alignItems: "center",
-                                        gap: 2,
-                                        color: data.statusEquipe === "ABERTA" ? "var(--x-accent)" : "#ff8a8a",
-                                    }}
+                                    className="x-team-status"
+                                    style={{ color: data.statusEquipe === "ABERTA" ? "var(--x-accent)" : "#ff8a8a" }}
                                     title={data.statusEquipe === "ABERTA" ? "Equipe aberta" : "Equipe fechada"}
+                                    aria-label={data.statusEquipe === "ABERTA" ? "Equipe aberta" : "Equipe fechada"}
                                 >
                                     <LockIcon open={data.statusEquipe === "ABERTA"} />
-                                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase" }}>
-                                        {data.statusEquipe === "ABERTA" ? "Aberta" : "Fechada"}
-                                    </span>
                                 </span>
                             </div>
 
-                            <div className="x-phero-info" style={{ marginTop: 14, display: "grid", gap: 6, color: "var(--x-meta, #aab)" }}>
+                            {/* NOTA gigante — ponto de destaque pra competitividade */}
+                            <div className="x-team-score">
+                                <span className="x-team-score-icon" aria-hidden>★</span>
+                                <span className="x-team-score-val">
+                                    {typeof data.notaEquipe === "number" ? Number(data.notaEquipe).toFixed(1) : "—"}
+                                </span>
+                                <span className="x-team-score-lbl">nota geral</span>
+                            </div>
+
+                            {/* Detalhes secundários */}
+                            <div className="x-phero-info" style={{ marginTop: 14, display: "grid", gap: 4, color: "var(--x-meta, #aab)" }}>
                                 <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-                                    <span><strong style={{ color: "#fff", marginRight: 6 }}>CEP</strong>{fmtCEP(data.cepOuLocal) || "—"}</span>
+                                    <span>{data.esporte}</span>
+                                    <span>·</span>
+                                    <span>{fmtCEP(data.cepOuLocal) || "—"}</span>
+                                    <span>·</span>
+                                    <span>{totalJogos == null ? "—" : `${totalJogos} jogo${totalJogos === 1 ? "" : "s"}`}</span>
                                 </div>
-                                <div><strong style={{ color: "#fff", marginRight: 6 }}>Esporte</strong>{data.esporte}</div>
-                                <div><strong style={{ color: "#fff", marginRight: 6 }}>Criada em</strong>{criadoEm ?? "—"}</div>
-                                <div><strong style={{ color: "#fff", marginRight: 6 }}>Dias de jogo</strong>{fmtDiasHorarios(data.diasHorariosPadrao) ?? "—"}</div>
-                                <div><strong style={{ color: "#fff", marginRight: 6 }}>Jogos</strong>{totalJogos == null ? "—" : totalJogos}</div>
+                                {fmtDiasHorarios(data.diasHorariosPadrao) && (
+                                    <div style={{ fontSize: 13 }}>{fmtDiasHorarios(data.diasHorariosPadrao)}</div>
+                                )}
                             </div>
 
                             <div className="x-phero-meta" style={{ marginTop: 14 }}>

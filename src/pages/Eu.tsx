@@ -212,14 +212,6 @@ export default function EuPage() {
 
             <main className="x-app-main">
                 <div className="x-app-narrow">
-                    <button
-                        className="x-phero-back"
-                        onClick={() => (window.history.length > 1 ? nav(-1) : nav("/equipes"))}
-                        style={{ marginBottom: 16 }}
-                    >
-                        ← Voltar
-                    </button>
-
                     {/* Cover image banner */}
                     <div className="x-cover x-reveal">
                         <img src="/quadra-areia.jpg" alt="" />
