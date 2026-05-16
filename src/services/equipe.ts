@@ -61,9 +61,15 @@ export async function buscarEquipes(
   q: string,
   opts?: { lat?: number; lng?: number; raioKm?: number; page?: number; pageSize?: number }
 ): Promise<BuscarEquipesPage> {
-  const page = opts?.page ?? 1;
+  const page = opts?.page ?? 1;        // 1-based (vem da UI)
   const pageSize = opts?.pageSize ?? 10;
-  const params: Record<string, string | number> = { q, page, pageSize };
+  // Backend usa Spring Pageable: página é 0-based e o parâmetro de tamanho é "size".
+  // Mandar page=1 retornava a 2ª página (vazia) — por isso a busca "não achava nada".
+  const params: Record<string, string | number> = {
+    q,
+    page: Math.max(0, page - 1),
+    size: pageSize,
+  };
   if (opts?.lat != null && opts?.lng != null) {
     params.lat = opts.lat;
     params.lng = opts.lng;
@@ -83,10 +89,14 @@ export async function buscarEquipes(
     };
   }
 
-  const items = (raw?.items ?? raw?.content ?? raw?.data ?? []) as EquipeResumo[];
-  const total = Number(raw?.total ?? raw?.totalElements ?? items.length) || 0;
-  const ps = Number(raw?.pageSize ?? raw?.size ?? pageSize) || pageSize;
-  const pg = Number(raw?.page ?? raw?.number ?? page) || page;
+  const items = (raw?.content ?? raw?.items ?? raw?.data ?? []) as EquipeResumo[];
+  const total = Number(raw?.totalElements ?? raw?.total ?? items.length) || 0;
+  const ps = Number(raw?.size ?? raw?.pageSize ?? pageSize) || pageSize;
+  // Spring devolve "number" 0-based → converte de volta pra 1-based pra UI
+  const pg =
+    raw?.number != null ? Number(raw.number) + 1
+    : raw?.page != null ? Number(raw.page)
+    : page;
   const totalPages = Number(raw?.totalPages ?? Math.max(1, Math.ceil(total / ps))) || 1;
   return { items, page: pg, pageSize: ps, total, totalPages };
 }
