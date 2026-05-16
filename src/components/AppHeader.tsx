@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { clearToken } from "../utils/auth";
-import { listarConvites } from "../services/convites";
-import { isNotImplemented } from "../utils/errors";
 
 type Props = {
     onLogout?: () => void;
@@ -13,29 +11,9 @@ export default function AppHeader({ onLogout }: Props) {
     const loc = useLocation();
     const path = loc.pathname;
 
-    const [pendentes, setPendentes] = useState<number>(0);
     const [open, setOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
     const btnRef = useRef<HTMLButtonElement | null>(null);
-
-    // Poll convites pendentes a cada 60s (silencioso se endpoint não existir)
-    useEffect(() => {
-        let alive = true;
-        async function check() {
-            try {
-                const list = await listarConvites();
-                if (!alive) return;
-                setPendentes(list.filter((c) => c.status === "PENDENTE").length);
-            } catch (e: any) {
-                if (!isNotImplemented(e)) {
-                    // erro real — não polui UI, só não atualiza badge
-                }
-            }
-        }
-        check();
-        const t = setInterval(check, 60_000);
-        return () => { alive = false; clearInterval(t); };
-    }, [path]);
 
     // Fecha o menu ao mudar de rota
     useEffect(() => { setOpen(false); }, [path]);
@@ -106,18 +84,6 @@ export default function AppHeader({ onLogout }: Props) {
             ),
         },
         {
-            to: "/convites",
-            label: "Convites",
-            active: path === "/convites",
-            badge: pendentes,
-            icon: (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                    <polyline points="22,6 12,13 2,6" />
-                </svg>
-            ),
-        },
-        {
             to: "/eu",
             label: "Perfil",
             active: path === "/eu",
@@ -167,7 +133,6 @@ export default function AppHeader({ onLogout }: Props) {
                         <span className="x-burger-bar" />
                         <span className="x-burger-bar" />
                         <span className="x-burger-bar" />
-                        {pendentes > 0 && <span className="x-nav-badge floating">{pendentes}</span>}
                     </button>
 
                     {open && (

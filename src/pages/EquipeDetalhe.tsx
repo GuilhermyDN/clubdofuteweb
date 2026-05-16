@@ -461,6 +461,13 @@ export default function EquipeDetalhePage() {
                             {/* Linha principal: NOME + NOTA + cadeado */}
                             <div className="x-team-headline">
                                 <h1 className="x-phero-title x-team-name">{data.nome}</h1>
+                                <div className="x-team-score" aria-label="Nota geral">
+                                    <span className="x-team-score-icon" aria-hidden>★</span>
+                                    <span className="x-team-score-val">
+                                        {typeof data.notaEquipe === "number" ? Number(data.notaEquipe).toFixed(1) : "—"}
+                                    </span>
+                                    <span className="x-team-score-lbl">nota geral</span>
+                                </div>
                                 <span
                                     className="x-team-status"
                                     style={{ color: data.statusEquipe === "ABERTA" ? "var(--x-accent)" : "#ff8a8a" }}
@@ -471,37 +478,12 @@ export default function EquipeDetalhePage() {
                                 </span>
                             </div>
 
-                            {/* NOTA gigante — ponto de destaque pra competitividade */}
-                            <div className="x-team-score">
-                                <span className="x-team-score-icon" aria-hidden>★</span>
-                                <span className="x-team-score-val">
-                                    {typeof data.notaEquipe === "number" ? Number(data.notaEquipe).toFixed(1) : "—"}
-                                </span>
-                                <span className="x-team-score-lbl">nota geral</span>
-                            </div>
-
-                            {/* Detalhes secundários */}
-                            <div className="x-phero-info" style={{ marginTop: 14, display: "grid", gap: 4, color: "var(--x-meta, #aab)" }}>
-                                <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
-                                    <span>{data.esporte}</span>
-                                    <span>·</span>
-                                    <span>
-                                        {(data as any).rua
-                                            ? `${(data as any).rua}${data.numero ? ", " + data.numero : ""}`
-                                            : fmtCEP(data.cep) || "—"}
-                                    </span>
-                                    <span>·</span>
-                                    <span>{totalJogos == null ? "—" : `${totalJogos} jogo${totalJogos === 1 ? "" : "s"}`}</span>
+                            {(souAdmin || souMembro) && (
+                                <div className="x-phero-meta" style={{ marginTop: 14 }}>
+                                    {souAdmin && <span className="x-pill accent">Você é admin</span>}
+                                    {!souAdmin && souMembro && <span className="x-pill success">Membro</span>}
                                 </div>
-                                {fmtDiasHorarios(data.diasHorariosPadrao) && (
-                                    <div style={{ fontSize: 13 }}>{fmtDiasHorarios(data.diasHorariosPadrao)}</div>
-                                )}
-                            </div>
-
-                            <div className="x-phero-meta" style={{ marginTop: 14 }}>
-                                {souAdmin && <span className="x-pill accent">Você é admin</span>}
-                                {!souAdmin && souMembro && <span className="x-pill success">Membro</span>}
-                            </div>
+                            )}
                         </div>
                         <div className="x-phero-actions">
                             <button
@@ -534,7 +516,7 @@ export default function EquipeDetalhePage() {
             <main className="x-app-main">
                 <div className="x-app-container">
                     {/* Stats compactas */}
-                    <div className="x-stats-compact x-reveal" style={{ marginBottom: 24 }}>
+                    <div className="x-stats-compact x-reveal" style={{ marginBottom: 16 }}>
                         <div className="x-stat-mini">
                             <span className="x-stat-mini-lbl">Membros</span>
                             <span className="x-stat-mini-val"><CountUp to={totalMembros} /></span>
@@ -553,6 +535,28 @@ export default function EquipeDetalhePage() {
                                 {totalJogos == null ? "—" : <CountUp to={totalJogos} />}
                             </span>
                         </div>
+                    </div>
+
+                    {/* Informações da equipe (esporte, local, agenda) */}
+                    <div className="x-team-info-bar x-reveal" style={{ marginBottom: 24 }}>
+                        <div className="x-team-info-item">
+                            <span className="x-team-info-lbl">Esporte</span>
+                            <span className="x-team-info-val">{data.esporte}</span>
+                        </div>
+                        <div className="x-team-info-item">
+                            <span className="x-team-info-lbl">Local</span>
+                            <span className="x-team-info-val">
+                                {(data as any).rua
+                                    ? `${(data as any).rua}${data.numero ? ", " + data.numero : ""}`
+                                    : fmtCEP(data.cep) || "—"}
+                            </span>
+                        </div>
+                        {fmtDiasHorarios(data.diasHorariosPadrao) && (
+                            <div className="x-team-info-item">
+                                <span className="x-team-info-lbl">Agenda</span>
+                                <span className="x-team-info-val">{fmtDiasHorarios(data.diasHorariosPadrao)}</span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Administração (só admin) */}

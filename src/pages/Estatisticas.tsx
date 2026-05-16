@@ -139,7 +139,13 @@ export default function EstatisticasPage() {
                                     <hr className="x-divider" />
                                     <div className="x-list">
                                         {data.parceirosFrequentes.map((p) => (
-                                            <div key={p.usuarioId} className="x-row">
+                                            <button
+                                                key={p.usuarioId}
+                                                type="button"
+                                                className="x-row x-row-clickable"
+                                                onClick={() => setUserDetalhe({ usuarioId: p.usuarioId, nome: p.nome, fotoPerfil: p.fotoPerfil })}
+                                                title="Ver detalhes do jogador"
+                                            >
                                                 <UserAvatar nome={p.nome} fotoPerfil={p.fotoPerfil} size="sm" />
                                                 <div className="x-row-main">
                                                     <div className="x-row-name">{p.nome}</div>
@@ -149,19 +155,13 @@ export default function EstatisticasPage() {
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <div className="x-row-actions">
-                                                    <button
-                                                        className="x-btn ghost sm"
-                                                        onClick={() => setUserDetalhe({ usuarioId: p.usuarioId, nome: p.nome, fotoPerfil: p.fotoPerfil })}
-                                                        title="Ver detalhes do jogador"
-                                                    >
-                                                        Ver mais
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: 4 }}>
-                                                            <polyline points="9 18 15 12 9 6" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </div>
+                                                <span className="x-row-cta" aria-hidden>
+                                                    Ver mais
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <polyline points="9 18 15 12 9 6" />
+                                                    </svg>
+                                                </span>
+                                            </button>
                                         ))}
                                     </div>
                                 </div>

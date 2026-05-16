@@ -1,10 +1,23 @@
 import axios from "axios";
 import { clearToken, getToken } from "../utils/auth";
+import { enrichResponse, registerPhoto } from "../utils/devPhotoEnricher";
 
 export const api = axios.create({
   baseURL: "http://72.60.54.232:8579",
   timeout: 20000,
 });
+
+// DEMO-ONLY: cache de fotos por usuarioId (remover quando o backend retornar fotoPerfil)
+const DEMO_PHOTOS: Record<number, string> = {
+  3: "https://pub-a40bfb8bb6d84346a53f079b2806026b.r2.dev/fotos/3_1778619305355.jpg",
+  4: "https://pub-a40bfb8bb6d84346a53f079b2806026b.r2.dev/fotos/4_1778619531113.jpg",
+  5: "https://pub-a40bfb8bb6d84346a53f079b2806026b.r2.dev/fotos/5_1778619532414.jpg",
+  6: "https://pub-a40bfb8bb6d84346a53f079b2806026b.r2.dev/fotos/6_1778619533524.jpg",
+  7: "https://pub-a40bfb8bb6d84346a53f079b2806026b.r2.dev/fotos/7_1778619534605.jpg",
+  8: "https://pub-a40bfb8bb6d84346a53f079b2806026b.r2.dev/fotos/8_1778619535713.jpg",
+  9: "https://pub-a40bfb8bb6d84346a53f079b2806026b.r2.dev/fotos/9_1778619536749.jpg",
+};
+Object.entries(DEMO_PHOTOS).forEach(([id, url]) => registerPhoto(Number(id), url));
 
 api.interceptors.request.use((config) => {
   const token = getToken();
@@ -22,7 +35,7 @@ const PUBLIC_PATHS = [
 ];
 
 api.interceptors.response.use(
-  (res) => res,
+  (res) => enrichResponse(res),
   (err) => {
     const status = err?.response?.status;
     const url: string = err?.config?.url || "";

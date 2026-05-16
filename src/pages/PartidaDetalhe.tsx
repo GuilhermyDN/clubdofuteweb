@@ -13,7 +13,7 @@ import { toast } from "../components/Toast";
 import { explainError, isAuthError } from "../utils/errors";
 
 type Presenca = { usuarioId: number; nome: string; statusPresenca: "CONFIRMADO" | "CANCELADO" | string; fotoPerfil?: string | null; };
-type TimeJogador = { usuarioId: number; nome: string; nota: number; };
+type TimeJogador = { usuarioId: number; nome: string; nota: number; fotoPerfil?: string | null; };
 type TimeGerado = { numero: number; jogadores: TimeJogador[]; };
 type TimesGerados = { id: number; partidaId: number; times: TimeGerado[]; reservas: TimeJogador[]; geradoEm: string; };
 type PartidaDetalhe = {
@@ -556,10 +556,13 @@ export default function PartidaDetalhePage() {
                                                             key={j.usuarioId}
                                                             style={isMvp ? { background: "rgba(255,210,74,0.1)", borderColor: "rgba(255,210,74,0.4)" } : undefined}
                                                         >
-                                                            <span className="x-team-player-name">
-                                                                {isMvp && <span title="MVP" style={{ marginRight: 6 }}>🏆</span>}
-                                                                {j.nome}
-                                                            </span>
+                                                            <div className="x-team-player-main">
+                                                                <UserAvatar nome={j.nome} fotoPerfil={j.fotoPerfil} size="sm" />
+                                                                <span className="x-team-player-name">
+                                                                    {isMvp && <span title="MVP" style={{ marginRight: 6 }}>🏆</span>}
+                                                                    {j.nome}
+                                                                </span>
+                                                            </div>
                                                             <span className="x-team-player-nota" title="Nota do jogador" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                                                                 <span aria-hidden style={{ color: "var(--x-accent)" }}>★</span>
                                                                 {Number(j.nota).toFixed(Number.isInteger(j.nota) ? 0 : 1)}
@@ -582,7 +585,10 @@ export default function PartidaDetalhePage() {
                                             ) : (
                                                 data.timesGerados.reservas.map((r) => (
                                                     <div className="x-team-player" key={r.usuarioId}>
-                                                        <span className="x-team-player-name">{r.nome}</span>
+                                                        <div className="x-team-player-main">
+                                                            <UserAvatar nome={r.nome} fotoPerfil={r.fotoPerfil} size="sm" />
+                                                            <span className="x-team-player-name">{r.nome}</span>
+                                                        </div>
                                                         <span className="x-team-player-nota" title="Nota do jogador" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                                                             <span aria-hidden style={{ color: "var(--x-accent)" }}>★</span>
                                                             {Number(r.nota).toFixed(Number.isInteger(r.nota) ? 0 : 1)}

@@ -9,7 +9,6 @@ import PartidaDetalhePage from "../pages/PartidaDetalhe";
 import EquipePartidasPage from "../pages/EquipePartidas";
 import EquipesPage from "../pages/EquipesPage";
 import PartidaAvaliacaoPage from "../pages/PartidaAvaliacao";
-import Convites from "../pages/Convites";
 import EstatisticasPage from "../pages/Estatisticas";
 import Beneficios from "../pages/Beneficios";
 import Modalidades from "../pages/Modalidades";
@@ -38,7 +37,6 @@ export default function AppRoutes() {
         <Route path="/equipes/:equipeId/partidas" element={<ProtectedRoute><EquipePartidasPage /></ProtectedRoute>} />
         <Route path="/partidas/:partidaId" element={<ProtectedRoute><PartidaDetalhePage /></ProtectedRoute>} />
         <Route path="/partidas/:partidaId/avaliar" element={<ProtectedRoute><PartidaAvaliacaoPage /></ProtectedRoute>} />
-        <Route path="/convites" element={<ProtectedRoute><Convites /></ProtectedRoute>} />
         <Route path="/estatisticas" element={<ProtectedRoute><EstatisticasPage /></ProtectedRoute>} />
       </Routes>
     </BrowserRouter>
