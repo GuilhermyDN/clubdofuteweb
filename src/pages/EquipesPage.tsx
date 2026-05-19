@@ -4,9 +4,10 @@ import type { CriarEquipeBody, EquipeDetalhe, EquipeResumo, Esporte, StatusEquip
 import {
     buscarEquipes, criarEquipe, entrarEquipeAberta, entrarEquipeFechada, getEquipe, listarMinhasEquipes,
 } from "../services/equipe";
+import { buscarPartidas, type PartidaBuscaResumo } from "../services/equipePartidas";
 import AppHeader from "../components/AppHeader";
 import { toast } from "../components/Toast";
-import { explainError, isAuthError } from "../utils/errors";
+import { explainError, isAuthError, isNotImplemented } from "../utils/errors";
 
 function normalizeStr(v: string) { return (v ?? "").trim(); }
 function fmtEndereco(r: { cep?: string | null; rua?: string | null; numero?: string | null }) {
@@ -25,6 +26,21 @@ function maskCepOuLocal(v: string) {
         return `${nums.slice(0, 5)}-${nums.slice(5)}`;
     }
     return v;
+}
+function fmtPartidaDateBox(iso: string): { dia: string; mes: string } {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return { dia: "—", mes: "—" };
+    return {
+        dia: String(d.getDate()).padStart(2, "0"),
+        mes: d.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "").slice(0, 3).toUpperCase(),
+    };
+}
+function fmtPartidaQuando(iso: string): string {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    const weekday = d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "");
+    const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} · ${hora}`;
 }
 
 type DiaKey = "segunda" | "terca" | "quarta" | "quinta" | "sexta" | "sabado" | "domingo";
@@ -140,10 +156,15 @@ export default function EquipesPage() {
         } finally { setCreating(false); }
     }
 
+    // modo da seção "Descobrir": busca equipes ou partidas
+    const [discoverMode, setDiscoverMode] = useState<"EQUIPES" | "PARTIDAS">("EQUIPES");
+
     const [q, setQ] = useState("");
     const [searching, setSearching] = useState(false);
     const [searchedOnce, setSearchedOnce] = useState(false);
     const [results, setResults] = useState<EquipeResumo[]>([]);
+    const [partidaResults, setPartidaResults] = useState<PartidaBuscaResumo[]>([]);
+    const [partidasIndisponivel, setPartidasIndisponivel] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [detalhe, setDetalhe] = useState<EquipeDetalhe | null>(null);
     const [joining, setJoining] = useState(false);
@@ -190,6 +211,33 @@ export default function EquipesPage() {
 
     async function handleBuscar(termo: string = q, pageArg: number = page) {
         const qq = normalizeStr(termo);
+
+        // ── Modo PARTIDAS ──────────────────────────────────────────────
+        if (discoverMode === "PARTIDAS") {
+            try {
+                setSearching(true);
+                setSearchedOnce(true);
+                const res = await buscarPartidas(qq, { page: pageArg, pageSize: PAGE_SIZE });
+                setPartidaResults(res.items ?? []);
+                setTotal(res.total ?? 0);
+                setTotalPages(Math.max(1, res.totalPages ?? 1));
+                setPartidasIndisponivel(false);
+            } catch (e: any) {
+                if (isAuthError(e)) return;
+                if (isNotImplemented(e)) {
+                    // endpoint /partidas/buscar ainda não existe no backend
+                    setPartidasIndisponivel(true);
+                    setPartidaResults([]);
+                    setTotal(0);
+                    setTotalPages(1);
+                    return;
+                }
+                toast.error(explainError(e), "Falha na busca");
+            } finally { setSearching(false); }
+            return;
+        }
+
+        // ── Modo EQUIPES ───────────────────────────────────────────────
         try {
             setSearching(true);
             setSearchedOnce(true);
@@ -208,17 +256,23 @@ export default function EquipesPage() {
         } finally { setSearching(false); }
     }
 
-    // reseta pagina quando muda termo de busca ou filtro
+    // reseta pagina quando muda termo de busca, filtro ou modo
     useEffect(() => {
         setPage(1);
-    }, [q, pertoDeMim, geo]);
+    }, [q, pertoDeMim, geo, discoverMode]);
 
-    // debounce: busca 400ms depois que parou de digitar / mudar filtro / mudar pagina
+    // ao trocar de modo, limpa seleção de equipe (card "Entrar")
+    useEffect(() => {
+        setSelectedId(null);
+        setDetalhe(null);
+    }, [discoverMode]);
+
+    // debounce: busca 400ms depois que parou de digitar / mudar filtro / pagina / modo
     useEffect(() => {
         const t = setTimeout(() => { handleBuscar(q, page); }, 400);
         return () => clearTimeout(t);
         /* eslint-disable-next-line */
-    }, [q, pertoDeMim, geo, page]);
+    }, [q, pertoDeMim, geo, page, discoverMode]);
 
     async function openDetalhe(id: string) {
         setSelectedId(id);
@@ -466,14 +520,42 @@ export default function EquipesPage() {
                         </div>
                     )}
 
-                    {/* Buscar */}
+                    {/* Descobrir (equipes / partidas) */}
                     <div>
-                        <div className="x-page-head" style={{ marginBottom: 20 }}>
+                        <div className="x-page-head" style={{ marginBottom: 16 }}>
                             <div>
-                                <h2 className="x-h3">Descobrir equipes</h2>
-                                <p className="x-page-sub">Encontre equipes abertas para participar.</p>
+                                <h2 className="x-h3">Descobrir</h2>
+                                <p className="x-page-sub">
+                                    {discoverMode === "EQUIPES"
+                                        ? "Encontre equipes abertas para participar."
+                                        : "Partidas abertas nos próximos dias."}
+                                </p>
                             </div>
-                            <span className="x-pill">{results.length}</span>
+                            <span className="x-pill">
+                                {discoverMode === "EQUIPES" ? results.length : partidaResults.length}
+                            </span>
+                        </div>
+
+                        {/* Toggle Equipes / Partidas */}
+                        <div className="x-segmented" role="tablist" style={{ marginBottom: 14 }}>
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={discoverMode === "EQUIPES"}
+                                className={`x-segmented-btn ${discoverMode === "EQUIPES" ? "active" : ""}`}
+                                onClick={() => setDiscoverMode("EQUIPES")}
+                            >
+                                Equipes
+                            </button>
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={discoverMode === "PARTIDAS"}
+                                className={`x-segmented-btn ${discoverMode === "PARTIDAS" ? "active" : ""}`}
+                                onClick={() => setDiscoverMode("PARTIDAS")}
+                            >
+                                Partidas
+                            </button>
                         </div>
 
                         <div className="x-search">
@@ -485,7 +567,9 @@ export default function EquipesPage() {
                             </span>
                             <input
                                 className="x-input"
-                                placeholder="Buscar equipe por nome..."
+                                placeholder={discoverMode === "EQUIPES"
+                                    ? "Buscar equipe por nome..."
+                                    : "Buscar partida pela equipe..."}
                                 value={q}
                                 onChange={(e) => setQ(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === "Escape") setQ(""); }}
@@ -509,78 +593,168 @@ export default function EquipesPage() {
                             )}
                         </div>
 
-                        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
-                            <button
-                                type="button"
-                                className={`x-btn sm ${pertoDeMim ? "" : "ghost"}`}
-                                onClick={pertoDeMim ? desativarPertoDeMim : ativarPertoDeMim}
-                                disabled={locating}
-                                title={pertoDeMim ? "Desativar filtro" : "Filtrar equipes próximas"}
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: "-2px" }}>
-                                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z" />
-                                    <circle cx="12" cy="10" r="3" />
-                                </svg>
-                                {locating ? "Localizando..." : (pertoDeMim ? "Perto de mim ✓" : "Perto de mim")}
-                            </button>
-                            {pertoDeMim && geo && (
-                                <span className="x-meta" style={{ fontSize: 12 }}>
-                                    Ordenando por proximidade
-                                </span>
-                            )}
-                        </div>
-
-                        {results.length === 0 ? (
-                            <div className="x-empty">
-                                <div className="x-empty-icon">
-                                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                                        <circle cx="11" cy="11" r="8" />
-                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        {discoverMode === "EQUIPES" && (
+                            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
+                                <button
+                                    type="button"
+                                    className={`x-btn sm ${pertoDeMim ? "" : "ghost"}`}
+                                    onClick={pertoDeMim ? desativarPertoDeMim : ativarPertoDeMim}
+                                    disabled={locating}
+                                    title={pertoDeMim ? "Desativar filtro" : "Filtrar equipes próximas"}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: "-2px" }}>
+                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 1 1 18 0z" />
+                                        <circle cx="12" cy="10" r="3" />
                                     </svg>
-                                </div>
-                                <h3 className="x-empty-title">Nada encontrado</h3>
-                                <p className="x-empty-text">
-                                    {searchedOnce
-                                        ? (q.trim()
-                                            ? `Nenhuma equipe com o termo "${q}".`
-                                            : "Nenhuma equipe pública disponível no momento. Que tal criar a sua?")
-                                        : "Carregando..."}
-                                </p>
-                                {!q.trim() && searchedOnce && (
-                                    <button className="x-btn sm" onClick={abrirFormularioCriar}>
-                                        Criar equipe <span className="x-btn-arr">+</span>
-                                    </button>
+                                    {locating ? "Localizando..." : (pertoDeMim ? "Perto de mim ✓" : "Perto de mim")}
+                                </button>
+                                {pertoDeMim && geo && (
+                                    <span className="x-meta" style={{ fontSize: 12 }}>
+                                        Ordenando por proximidade
+                                    </span>
                                 )}
-                            </div>
-                        ) : (
-                            <div className="x-list">
-                                {results.map((r) => (
-                                    <button
-                                        key={r.id}
-                                        className="x-list-item"
-                                        onClick={() => openDetalhe(String(r.id))}
-                                        style={String(selectedId) === String(r.id) ? { borderColor: "var(--x-accent)" } : undefined}
-                                    >
-                                        <div className="x-avatar sm teal">{r.nome.charAt(0).toUpperCase()}</div>
-                                        <div className="x-list-item-main">
-                                            <div className="x-list-item-title">{r.nome}</div>
-                                            <div className="x-list-item-sub">
-                                                <span>{r.esporte}</span>
-                                                <span className="sep">·</span>
-                                                <span>{r.statusEquipe}</span>
-                                                <span className="sep">·</span>
-                                                <span>{fmtEndereco(r)}</span>
-                                            </div>
-                                        </div>
-                                        <div className="x-list-item-right">
-                                            <span className="x-chev">→</span>
-                                        </div>
-                                    </button>
-                                ))}
                             </div>
                         )}
 
-                        {results.length > 0 && totalPages > 1 && (
+                        {/* ── Resultados: EQUIPES ── */}
+                        {discoverMode === "EQUIPES" && (
+                            results.length === 0 ? (
+                                <div className="x-empty">
+                                    <div className="x-empty-icon">
+                                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                            <circle cx="11" cy="11" r="8" />
+                                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="x-empty-title">Nada encontrado</h3>
+                                    <p className="x-empty-text">
+                                        {searchedOnce
+                                            ? (q.trim()
+                                                ? `Nenhuma equipe com o termo "${q}".`
+                                                : "Nenhuma equipe pública disponível no momento. Que tal criar a sua?")
+                                            : "Carregando..."}
+                                    </p>
+                                    {!q.trim() && searchedOnce && (
+                                        <button className="x-btn sm" onClick={abrirFormularioCriar}>
+                                            Criar equipe <span className="x-btn-arr">+</span>
+                                        </button>
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="x-list">
+                                    {results.map((r) => (
+                                        <button
+                                            key={r.id}
+                                            className="x-list-item"
+                                            onClick={() => openDetalhe(String(r.id))}
+                                            style={String(selectedId) === String(r.id) ? { borderColor: "var(--x-accent)" } : undefined}
+                                        >
+                                            <div className="x-avatar sm teal">{r.nome.charAt(0).toUpperCase()}</div>
+                                            <div className="x-list-item-main">
+                                                <div className="x-list-item-title">{r.nome}</div>
+                                                <div className="x-list-item-sub">
+                                                    <span>{r.esporte}</span>
+                                                    <span className="sep">·</span>
+                                                    <span>{r.statusEquipe}</span>
+                                                    <span className="sep">·</span>
+                                                    <span>{fmtEndereco(r)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="x-list-item-right">
+                                                <span className="x-chev">→</span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )
+                        )}
+
+                        {/* ── Resultados: PARTIDAS ── */}
+                        {discoverMode === "PARTIDAS" && (
+                            partidasIndisponivel ? (
+                                <div className="x-empty">
+                                    <div className="x-empty-icon">
+                                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="12" cy="12" r="10" />
+                                            <polyline points="12 6 12 12 16 14" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="x-empty-title">Busca de partidas em breve</h3>
+                                    <p className="x-empty-text">
+                                        Ainda estamos preparando a descoberta de partidas. Por enquanto,
+                                        entre numa equipe para ver as partidas dela.
+                                    </p>
+                                </div>
+                            ) : partidaResults.length === 0 ? (
+                                <div className="x-empty">
+                                    <div className="x-empty-icon">
+                                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                                            <circle cx="11" cy="11" r="8" />
+                                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                        </svg>
+                                    </div>
+                                    <h3 className="x-empty-title">Nenhuma partida</h3>
+                                    <p className="x-empty-text">
+                                        {searchedOnce
+                                            ? (q.trim()
+                                                ? `Nenhuma partida com o termo "${q}".`
+                                                : "Nenhuma partida aberta nos próximos dias.")
+                                            : "Carregando..."}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="x-list">
+                                    {partidaResults.map((p) => {
+                                        const { dia, mes } = fmtPartidaDateBox(p.dataHora);
+                                        const local = fmtEndereco({ cep: p.cep, rua: p.rua, numero: p.numero });
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                className="x-list-item"
+                                                onClick={() => nav(`/partidas/${p.id}`)}
+                                            >
+                                                <div className="x-date-box future">
+                                                    <span className="x-date-box-day">{dia}</span>
+                                                    <span className="x-date-box-month">{mes}</span>
+                                                </div>
+                                                <div className="x-list-item-main">
+                                                    <div className="x-list-item-title">{p.equipeNome ?? "Partida"}</div>
+                                                    <div className="x-list-item-sub">
+                                                        <span>{fmtPartidaQuando(p.dataHora)}</span>
+                                                        {p.esporte && (
+                                                            <>
+                                                                <span className="sep">·</span>
+                                                                <span>{p.esporte}</span>
+                                                            </>
+                                                        )}
+                                                        {local !== "—" && (
+                                                            <>
+                                                                <span className="sep">·</span>
+                                                                <span>{local}</span>
+                                                            </>
+                                                        )}
+                                                        {typeof p.totalConfirmados === "number" && (
+                                                            <>
+                                                                <span className="sep">·</span>
+                                                                <span style={{ color: "var(--x-accent)", fontWeight: 700 }}>
+                                                                    {p.totalConfirmados}
+                                                                    {p.limiteParticipantes != null ? ` de ${p.limiteParticipantes}` : ""} confirmado{p.totalConfirmados !== 1 ? "s" : ""}
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="x-list-item-right">
+                                                    <span className="x-chev">→</span>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )
+                        )}
+
+                        {(discoverMode === "EQUIPES" ? results.length : partidaResults.length) > 0 && totalPages > 1 && (
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 16, flexWrap: "wrap" }}>
                                 <span className="x-meta" style={{ fontSize: 12 }}>
                                     Página {page} de {totalPages}{total ? ` · ${total} resultado${total === 1 ? "" : "s"}` : ""}
@@ -606,7 +780,7 @@ export default function EquipesPage() {
                             </div>
                         )}
 
-                        {selectedId && (
+                        {discoverMode === "EQUIPES" && selectedId && (
                             <div className="x-card" style={{ marginTop: 20 }}>
                                 <div className="x-card-title">
                                     Entrar na equipe

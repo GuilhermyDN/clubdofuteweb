@@ -2410,6 +2410,36 @@ body {
 }
 
 /* ── Search bar (busca com debounce + clear + spinner) ──────── */
+/* Segmented control (toggle Equipes / Partidas) */
+.x-segmented {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    background: var(--x-surface);
+    border: 1px solid var(--x-border);
+    border-radius: var(--x-r-pill, 999px);
+}
+.x-segmented-btn {
+    appearance: none;
+    border: 0;
+    cursor: pointer;
+    font-family: var(--x-font);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 8px 20px;
+    border-radius: var(--x-r-pill, 999px);
+    background: transparent;
+    color: var(--x-text-2);
+    transition: background 0.18s ease, color 0.18s ease;
+}
+.x-segmented-btn:hover { color: var(--x-text); }
+.x-segmented-btn.active {
+    background: var(--x-accent);
+    color: var(--x-accent-ink);
+}
+
 .x-search {
     position: relative;
     margin-bottom: 20px;

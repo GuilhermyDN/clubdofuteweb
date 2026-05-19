@@ -96,29 +96,31 @@ Edits relacionados (limpeza):
 
 ---
 
-## 6. ⚠️ Hack temporário de demo — REMOVER antes de deploy
+## 6. Hack temporário de demo — REMOVIDO
 
-Para o demo local exibir as fotos enquanto o backend não inclui `fotoPerfil`, foi adicionado um interceptor de resposta no Axios que enriquece o payload com fotos vindas de um mapa hardcoded (userId → URL R2). Arquivos a remover:
+O `devPhotoEnricher` (interceptor que injetava `fotoPerfil` de um mapa hardcoded) foi **apagado**. O front agora depende 100% do que o backend devolver:
 
-- [src/utils/devPhotoEnricher.ts](src/utils/devPhotoEnricher.ts) — apagar arquivo inteiro.
-- [src/services/api.ts](src/services/api.ts) — remover o import, o mapa `DEMO_PHOTOS`, o `Object.entries(...)...registerPhoto(...)` e trocar `enrichResponse(res)` de volta para `res` no interceptor de resposta.
+- Se vier `fotoPerfil` no JSON → `UserAvatar` mostra a foto.
+- Se não vier (ou a URL quebrar) → mostra a bolinha com a inicial do nome.
 
-Tudo o que esse hack faz é injetar `fotoPerfil` quando o backend não devolve. Depois que o Java passar a incluir o campo, é só apagar.
+Essa regra já existia no componente `UserAvatar` ([src/components/UserAvatar.tsx](src/components/UserAvatar.tsx)) e em todos os tipos (`MembroEquipe`, `Presenca`, `TimeJogador`, `ParceiroFrequente`). Não há mais nada de fake no código — quando o backend incluir `fotoPerfil` nos DTOs, as fotos aparecem sozinhas.
 
 ---
 
-## 7. Onde ver no demo (rodando agora em `http://localhost:5173`)
+## 7. Busca: paginação corrigida + toggle Equipes/Partidas
 
-| Tela | URL | O que validar |
-| --- | --- | --- |
-| Equipes (home logada) | `/equipes` | Hambúrguer no top direito, brand → home |
-| Hero da equipe | `/equipes/2` | Nome + ★ nota + cadeado inline, info-bar abaixo |
-| Lista de membros | `/equipes/2` (scroll) | Avatares com foto, medalhas 🥇🥈🥉 nos top-3 |
-| Partida | `/partidas/2` | Presenças com foto |
-| Times gerados | `/partidas/2` (scroll) | Cada jogador com foto + ★ nota |
-| Estatísticas | `/estatisticas` | Parceiros frequentes — linha inteira clicável, foto + "Ver mais →" |
-| Modal jogador | clicar em qualquer parceiro | Abre com foto + Nota / Partidas / Média recebida |
-| Perfil | `/eu` | Foto do próprio usuário visível, hambúrguer no top |
+### 7.1. Bug de paginação (busca não retornava nada)
+
+`buscarEquipes` mandava `page=1` (1-based) e `pageSize`. O backend é Spring (`Pageable`): página é **0-based** e o parâmetro é `size`. Resultado: a 1ª página caía na 2ª do backend → sempre vazia. Corrigido em [src/services/equipe.ts](src/services/equipe.ts): envia `page-1` e `size`, e converte o `number` de volta pra 1-based.
+
+### 7.2. Toggle Equipes / Partidas na home
+
+A seção "Descobrir" agora tem um botão segmentado **Equipes | Partidas** ([src/pages/EquipesPage.tsx](src/pages/EquipesPage.tsx)):
+
+- **Equipes** → busca equipes (comportamento existente).
+- **Partidas** → busca partidas futuras/abertas via `GET /partidas/buscar` (novo service `buscarPartidas` em [src/services/equipePartidas.ts](src/services/equipePartidas.ts)).
+
+O backend de `/partidas/buscar` **já existe** e devolve as partidas com `statusPartida = ABERTA`. Detalhe: o id da partida vem como `partidaId` (não `id`) — o service normaliza pra `id`. Se algum dia o endpoint sumir, o front cai num estado "Busca de partidas em breve".
 
 ---
 
